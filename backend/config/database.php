@@ -9,23 +9,26 @@ class Database {
     private $connection;
     
     private function __construct() {
-        $host = getenv('DB_HOST') ?: 'db';
+        $driver = getenv('DB_DRIVER') ?: 'pgsql'; // 'pgsql' oder 'mysql'
+        $host = getenv('DB_HOST') ?: 'postgres';
         $dbname = getenv('DB_DATABASE') ?: 'dnd_charsheet';
         $username = getenv('DB_USERNAME') ?: 'dnd_user';
         $password = getenv('DB_PASSWORD') ?: 'dnd_password';
+        $port = getenv('DB_PORT') ?: ($driver === 'pgsql' ? '5432' : '3306');
         
         try {
-            $this->connection = new PDO(
-                "mysql:host=$host;dbname=$dbname;charset=utf8mb4",
-                $username,
-                $password,
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES => false,
-                    PDO::ATTR_PERSISTENT => false
-                ]
-            );
+            if ($driver === 'pgsql') {
+                $dsn = "pgsql:host=$host;port=$port;dbname=$dbname";
+            } else {
+                $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
+            }
+
+            $this->connection = new PDO($dsn, $username, $password, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_PERSISTENT => false
+            ]);
         } catch (PDOException $e) {
             error_log("Datenbank-Verbindungsfehler: " . $e->getMessage());
             throw new Exception("Verbindungsfehler zur Datenbank. Bitte prüfe die Konfiguration.");

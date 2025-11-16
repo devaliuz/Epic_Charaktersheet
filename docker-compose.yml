@@ -1,10 +1,10 @@
 services:
-  # PHP Backend Service
-  php:
+  # PHP/Apache Web (Backend + Static Frontend)
+  web:
     build:
-      context: .
+      context: ./docker/php
       dockerfile: Dockerfile
-    container_name: dnd_char_php
+    container_name: dnd_web
     volumes:
       - ./backend:/var/www/html/backend
       - ./frontend:/var/www/html/public
@@ -12,58 +12,53 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - db
+      - postgres
     environment:
-      - DB_HOST=db
+      - DB_DRIVER=pgsql
+      - DB_HOST=postgres
       - DB_DATABASE=dnd_charsheet
       - DB_USERNAME=dnd_user
       - DB_PASSWORD=dnd_password
-      - DB_PORT=3306
+      - DB_PORT=5432
     networks:
-      - dnd_network
+      - app_net
     restart: unless-stopped
 
-  # MySQL Database
-  db:
-    image: mysql:8.0
-    container_name: dnd_char_db
+  # PostgreSQL Datenbank
+  postgres:
+    image: postgres:15
+    container_name: dnd_postgres
     environment:
-      MYSQL_DATABASE: dnd_charsheet
-      MYSQL_USER: dnd_user
-      MYSQL_PASSWORD: dnd_password
-      MYSQL_ROOT_PASSWORD: root_password
+      POSTGRES_DB: dnd_charsheet
+      POSTGRES_USER: dnd_user
+      POSTGRES_PASSWORD: dnd_password
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - db_data:/var/lib/mysql
-      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./database/init.sql:/docker-entrypoint-initdb.d/02-init.sql
+      - pg_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     networks:
-      - dnd_network
+      - app_net
     restart: unless-stopped
-    command: --default-authentication-plugin=mysql_native_password
 
-  # phpMyAdmin (optional, für Datenbank-Management)
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    container_name: dnd_char_pma
+  # Adminer (optional)
+  adminer:
+    image: adminer:latest
+    container_name: dnd_adminer
     environment:
-      PMA_HOST: db
-      PMA_USER: root
-      PMA_PASSWORD: root_password
-      UPLOAD_LIMIT: 50M
-    ports:
-      - "8081:80"
+      - ADMINER_DEFAULT_SERVER=postgres
     depends_on:
-      - db
+      - postgres
+    ports:
+      - "8081:8080"
     networks:
-      - dnd_network
+      - app_net
     restart: unless-stopped
 
 volumes:
-  db_data:
+  pg_data:
     driver: local
 
 networks:
-  dnd_network:
+  app_net:
     driver: bridge
