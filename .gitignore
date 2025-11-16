@@ -80,6 +80,8 @@ coverage/
 
 # Media (aus Git entfernen)
 *.mp3
+frontend/audio/
+frontend/images/
 
 # OS / Editor
 .DS_Store
