@@ -29,6 +29,11 @@ class Database {
                 PDO::ATTR_EMULATE_PREPARES => false,
                 PDO::ATTR_PERSISTENT => false
             ]);
+
+            // Für PostgreSQL: auf 'app' Schema umschalten
+            if ($driver === 'pgsql') {
+                $this->connection->exec("SET search_path TO app, public");
+            }
         } catch (PDOException $e) {
             error_log("Datenbank-Verbindungsfehler: " . $e->getMessage());
             throw new Exception("Verbindungsfehler zur Datenbank. Bitte prüfe die Konfiguration.");

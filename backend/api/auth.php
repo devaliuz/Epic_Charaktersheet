@@ -40,40 +40,8 @@ class AuthAPI {
     // Stelle sicher, dass mindestens ein Admin existiert
     private function ensureDefaultAdmin() {
         try {
-            // Stelle sicher, dass Tabelle existiert (idempotent)
-            $this->db->exec("
-                CREATE TABLE IF NOT EXISTS users (
-                    id INT PRIMARY KEY AUTO_INCREMENT,
-                    username VARCHAR(100) NOT NULL UNIQUE,
-                    password_hash VARCHAR(255) NOT NULL,
-                    role ENUM('admin','user') NOT NULL DEFAULT 'user',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_role (role)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-            ");
-            // characters.user_id ggf. nachrüsten (idempotent, kompatibel auch ohne IF NOT EXISTS)
-            // 1) Spalte
-            $colExistsStmt = $this->db->prepare('SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = \'characters\' AND COLUMN_NAME = \'user_id\'');
-            $colExistsStmt->execute();
-            $colExists = (int)$colExistsStmt->fetch()['cnt'] > 0;
-            if (!$colExists) {
-                $this->db->exec('ALTER TABLE characters ADD COLUMN user_id INT NULL');
-            }
-            // 2) Index
-            $idxExistsStmt = $this->db->prepare('SELECT COUNT(*) AS cnt FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = \'characters\' AND INDEX_NAME = \'idx_user\'');
-            $idxExistsStmt->execute();
-            $idxExists = (int)$idxExistsStmt->fetch()['cnt'] > 0;
-            if (!$idxExists) {
-                $this->db->exec('CREATE INDEX idx_user ON characters(user_id)');
-            }
-            // 3) Foreign Key
-            $fkExistsStmt = $this->db->prepare('SELECT COUNT(*) AS cnt FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = \'characters\' AND CONSTRAINT_NAME = \'fk_char_user\' AND CONSTRAINT_TYPE = \'FOREIGN KEY\'');
-            $fkExistsStmt->execute();
-            $fkExists = (int)$fkExistsStmt->fetch()['cnt'] > 0;
-            if (!$fkExists) {
-                $this->db->exec('ALTER TABLE characters ADD CONSTRAINT fk_char_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL');
-            }
-            // Default-Admin sicherstellen
+            // PostgreSQL: Schema und Tabellen werden über docker/postgres/init/* erstellt.
+            // Hier nur sicherstellen, dass mindestens ein Admin existiert.
             $stmt = $this->db->query("SELECT COUNT(*) AS cnt FROM users");
             $cnt = (int)$stmt->fetch()['cnt'];
             if ($cnt === 0) {
