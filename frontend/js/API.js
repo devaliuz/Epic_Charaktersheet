@@ -11,6 +11,7 @@ class APIClient {
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
         const config = {
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
                 ...options.headers
@@ -667,6 +668,7 @@ window.sessionManager = {
             const response = await fetch('/backend/api/sessions.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ character_id: characterId, session_name: sessionName })
             });
             
@@ -691,6 +693,7 @@ window.sessionManager = {
             const response = await fetch('/backend/api/sessions.php', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ session_id: sessionId, notes: notes })
             });
             
@@ -750,6 +753,7 @@ window.sessionManager = {
             const response = await fetch('/backend/api/sessions.php?action=snapshot', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ 
                     character_id: characterId,
                     character_data: characterData  // Sende aktuelle Frontend-Daten mit
@@ -773,7 +777,7 @@ window.sessionManager = {
     // Lade neuesten Screenshot für einen Character
     async getLatestSnapshot(characterId) {
         try {
-            const response = await fetch(`/backend/api/sessions.php?character_id=${characterId}&latest_snapshot=true`);
+            const response = await fetch(`/backend/api/sessions.php?character_id=${characterId}&latest_snapshot=true`, { credentials: 'include' });
             
             if (!response.ok) {
                 if (response.status === 404) {
@@ -830,7 +834,7 @@ window.sessionManager = {
     // Aktualisiere Session-Status in der UI
     async updateSessionStatus(characterId) {
         try {
-            const response = await fetch(`/backend/api/sessions.php?character_id=${characterId}&active=true`);
+            const response = await fetch(`/backend/api/sessions.php?character_id=${characterId}&active=true`, { credentials: 'include' });
             const activeSession = await response.json();
             
             const statusEl = document.getElementById('sessionStatus');
