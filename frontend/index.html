@@ -10,12 +10,18 @@
     <script>
         // Login erzwingen und nach Login letzten gespielten Charakter laden
         (async function enforceLoginAndAutoload() {
+            const params = new URLSearchParams(location.search);
+            const debug = params.get('debug') === '1';
             try {
                 const res = await fetch('/backend/api/auth.php', { credentials: 'include' });
                 const user = await res.json();
                 if (!user || !user.id) {
-                    const redirect = encodeURIComponent(location.pathname);
-                    location.href = `/login.html?redirect=${redirect}`;
+                    if (debug) {
+                        console.error('Auth-Prüfung fehlgeschlagen oder keine Session. user=', user);
+                    } else {
+                        const redirect = encodeURIComponent(location.pathname + location.search);
+                        location.href = `/login.html?redirect=${redirect}`;
+                    }
                     return;
                 }
                 // Admin oder User: lade Liste und versuche letzten Snapshot zu finden
@@ -49,8 +55,13 @@
                     }
                 }
             } catch (e) {
-                const redirect = encodeURIComponent(location.pathname);
-                location.href = `/login.html?redirect=${redirect}`;
+                if (debug) {
+                    console.error('Fehler beim Initialisieren:', e);
+                    alert('Fehler beim Initialisieren: ' + (e?.message || e));
+                } else {
+                    const redirect = encodeURIComponent(location.pathname + location.search);
+                    location.href = `/login.html?redirect=${redirect}`;
+                }
             }
         })();
     </script>
