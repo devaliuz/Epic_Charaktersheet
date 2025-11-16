@@ -48,7 +48,8 @@
 				const redirect = new URLSearchParams(location.search).get('redirect') || '/index.html';
 				// Schutz: Nicht auf sich selbst zurückleiten
 				const target = redirect && redirect !== location.pathname ? redirect : '/index.html';
-				location.href = target;
+				// Warte kurz, damit der Browser das Set-Cookie persistiert
+				setTimeout(() => { location.href = target; }, 200);
 			} catch (e) {
 				errorEl.textContent = e.message;
 				errorEl.style.display = 'block';
