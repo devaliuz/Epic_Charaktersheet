@@ -6,16 +6,29 @@
 
 // Session früh starten
 if (session_status() === PHP_SESSION_NONE) {
+    if (function_exists('session_set_cookie_params')) {
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path' => '/',
+            'secure' => false,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+    }
     session_start();
 }
 
 header('Content-Type: application/json');
 // Dynamischer Origin für Cookies
-$origin = $_SERVER['HTTP_ORIGIN'] ?? 'http://localhost:8080';
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost:8090';
+$computedOrigin = $scheme . '://' . $host;
+$origin = $_SERVER['HTTP_ORIGIN'] ?? $computedOrigin;
 header("Access-Control-Allow-Origin: $origin");
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Vary: Origin');
 
 // Handle OPTIONS request (CORS Preflight)
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
