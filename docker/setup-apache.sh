@@ -1,3 +1,5 @@
+#!/bin/bash
+cat > /etc/apache2/sites-available/000-default.conf << 'APACHE_CONFIG'
 <VirtualHost *:80>
     ServerAdmin webmaster@localhost
     DocumentRoot /var/www/html/public
@@ -9,28 +11,22 @@
         DirectoryIndex index.html index.php
     </Directory>
 
-    # Backend Alias - mappe /backend auf /var/www/html/backend
     Alias /backend /var/www/html/backend
     
-    # API Routes
     <Directory /var/www/html/backend>
         Options FollowSymLinks ExecCGI
         AllowOverride All
         Require all granted
-        # PHP-Dateien ausführen
         AddHandler application/x-httpd-php .php
         DirectoryIndex index.php
     </Directory>
 
-    # CORS Headers (für Cookies/Session unbedingt spezifischen Origin setzen)
     <IfModule mod_headers.c>
-        Header always set Access-Control-Allow-Origin "http://localhost:8080"
-        Header always set Access-Control-Allow-Credentials "true"
+        Header always set Access-Control-Allow-Origin "*"
         Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
         Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
     </IfModule>
     
-    # MIME-Types für Audio-Dateien
     <IfModule mod_mime.c>
         AddType audio/mpeg mp3
         AddType audio/ogg ogg
@@ -40,3 +36,11 @@
     ErrorLog ${APACHE_LOG_DIR}/error.log
     CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
+APACHE_CONFIG
+
+ln -sf /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-enabled/000-default.conf
+apache2ctl configtest
+apache2ctl graceful
+
+
+

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Items Debug</title>
+    <style>
+        body { font-family: monospace; background: #0a0a0a; color: #f5f5f5; padding: 20px; }
+        .section { background: rgba(20,15,10,0.95); border: 2px solid rgba(139,69,19,0.6); padding: 20px; margin: 20px 0; border-radius: 10px; }
+        button { background: #ff8c00; color: #fff; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #ff6b00; }
+        pre { background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .error { color: #ff6b6b; }
+        .success { color: #4caf50; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Items Debug Tool</h1>
+    
+    <div class="section">
+        <h2>1. Aktuelle Items im DOM prüfen</h2>
+        <button onclick="checkDOMItems()">Items im DOM prüfen</button>
+        <div id="domResult"></div>
+    </div>
+    
+    <div class="section">
+        <h2>2. Was wird gesammelt?</h2>
+        <button onclick="checkCollectedData()">Gesammelte Daten prüfen</button>
+        <div id="collectResult"></div>
+    </div>
+    
+    <div class="section">
+        <h2>3. Was wird gespeichert?</h2>
+        <button onclick="testSave()">Test-Speichern (ohne wirklich zu speichern)</button>
+        <div id="saveResult"></div>
+    </div>
+    
+    <div class="section">
+        <h2>4. Was ist in der DB?</h2>
+        <button onclick="checkDBItems()">Items in DB prüfen</button>
+        <div id="dbResult"></div>
+    </div>
+
+    <script>
+        async function checkDOMItems() {
+            const resultEl = document.getElementById('domResult');
+            resultEl.innerHTML = '<p>Prüfe DOM...</p>';
+            
+            const items = {
+                equipment: [],
+                consumables: [],
+                tools: [],
+                treasure: []
+            };
+            
+            // Equipment
+            const equipmentList = document.getElementById('equipmentList');
+            if (equipmentList) {
+                equipmentList.querySelectorAll('.inventory-item').forEach(item => {
+                    const data = item.getAttribute('data-item');
+                    if (data) {
+                        try {
+                            items.equipment.push(JSON.parse(data));
+                        } catch(e) {}
+                    }
+                });
+            }
+            
+            // Consumables
+            const consumablesList = document.getElementById('consumablesList');
+            if (consumablesList) {
+                consumablesList.querySelectorAll('.inventory-item').forEach(item => {
+                    const data = item.getAttribute('data-item');
+                    if (data) {
+                        try {
+                            items.consumables.push(JSON.parse(data));
+                        } catch(e) {}
+                    }
+                });
+            }
+            
+            // Tools
+            const toolsList = document.getElementById('toolsList');
+            if (toolsList) {
+                toolsList.querySelectorAll('.inventory-item').forEach(item => {
+                    const data = item.getAttribute('data-item');
+                    if (data) {
+                        try {
+                            items.tools.push(JSON.parse(data));
+                        } catch(e) {}
+                    }
+                });
+            }
+            
+            // Treasure
+            const treasureList = document.getElementById('treasureList');
+            if (treasureList) {
+                treasureList.querySelectorAll('.treasure-item').forEach(item => {
+                    const data = item.getAttribute('data-item');
+                    if (data) {
+                        try {
+                            items.treasure.push(JSON.parse(data));
+                        } catch(e) {}
+                    }
+                });
+            }
+            
+            resultEl.innerHTML = `
+                <p class="success">✓ DOM-Items gefunden:</p>
+                <pre>${JSON.stringify(items, null, 2)}</pre>
+                <p>Equipment: ${items.equipment.length}, Consumables: ${items.consumables.length}, Tools: ${items.tools.length}, Treasure: ${items.treasure.length}</p>
+            `;
+        }
+        
+        async function checkCollectedData() {
+            const resultEl = document.getElementById('collectResult');
+            resultEl.innerHTML = '<p>Sammle Daten...</p>';
+            
+            try {
+                if (!window.CharacterDataManagerAPI) {
+                    throw new Error('CharacterDataManagerAPI nicht verfügbar');
+                }
+                
+                const manager = new window.CharacterDataManagerAPI(1);
+                const data = manager.collectData();
+                
+                resultEl.innerHTML = `
+                    <p class="success">✓ Daten gesammelt:</p>
+                    <pre>${JSON.stringify({
+                        inventory: {
+                            equipment: data.inventory?.equipment?.length || 0,
+                            consumables: data.inventory?.consumables?.length || 0,
+                            tools: data.inventory?.tools?.length || 0,
+                            treasure: data.inventory?.treasure?.length || 0,
+                            items: data.inventory
+                        },
+                        equipment: data.equipment
+                    }, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultEl.innerHTML = `<p class="error">FEHLER: ${error.message}</p>`;
+            }
+        }
+        
+        async function testSave() {
+            const resultEl = document.getElementById('saveResult');
+            resultEl.innerHTML = '<p>Teste Speichern...</p>';
+            
+            try {
+                if (!window.CharacterDataManagerAPI) {
+                    throw new Error('CharacterDataManagerAPI nicht verfügbar');
+                }
+                
+                const manager = new window.CharacterDataManagerAPI(1);
+                const data = manager.collectData();
+                
+                // Zeige was gesendet werden würde
+                const payload = {
+                    inventory: data.inventory,
+                    equipment: data.equipment
+                };
+                
+                resultEl.innerHTML = `
+                    <p class="success">✓ Daten die gesendet würden:</p>
+                    <pre>${JSON.stringify(payload, null, 2)}</pre>
+                    <p><strong>WICHTIG:</strong> Prüfe ob alle Items eine category haben und ob type korrekt ist!</p>
+                `;
+            } catch (error) {
+                resultEl.innerHTML = `<p class="error">FEHLER: ${error.message}</p>`;
+            }
+        }
+        
+        async function checkDBItems() {
+            const resultEl = document.getElementById('dbResult');
+            resultEl.innerHTML = '<p>Lade Items aus DB...</p>';
+            
+            try {
+                const response = await fetch('/backend/api/characters.php?id=1');
+                const character = await response.json();
+                
+                const items = [];
+                if (character.inventory) {
+                    const inv = character.inventory;
+                    if (Array.isArray(inv)) {
+                        items.push(...inv);
+                    } else {
+                        items.push(...(inv.equipment || []));
+                        items.push(...(inv.consumables || []));
+                        items.push(...(inv.tools || []));
+                        items.push(...(inv.treasure || []));
+                    }
+                }
+                
+                resultEl.innerHTML = `
+                    <p class="success">✓ ${items.length} Items in DB gefunden</p>
+                    <pre>${JSON.stringify(items.map(i => ({
+                        id: i.id,
+                        name: i.name,
+                        type: i.type,
+                        category: i.category
+                    })), null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultEl.innerHTML = `<p class="error">FEHLER: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
+
+

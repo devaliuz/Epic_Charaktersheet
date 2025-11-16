@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DB Admin - D&D Character Sheet</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0f0a 100%);
+            color: #f5f5f5;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #ff8c00;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(255, 140, 0, 0.8);
+            font-size: 2.5em;
+        }
+        
+        .warning {
+            background: rgba(255, 69, 0, 0.2);
+            border: 2px solid rgba(255, 69, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: #ffb366;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .tab-btn {
+            background: rgba(100, 50, 25, 0.9);
+            border: 2px solid rgba(139, 69, 19, 0.8);
+            color: #ffb366;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        
+        .tab-btn:hover {
+            background: rgba(139, 69, 19, 0.9);
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, rgba(255, 140, 0, 0.9), rgba(255, 69, 0, 0.9));
+            border-color: rgba(255, 140, 0, 0.8);
+            color: #fff;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .query-container {
+            background: rgba(20, 15, 10, 0.95);
+            border: 2px solid rgba(139, 69, 19, 0.6);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .query-section {
+            margin-bottom: 25px;
+        }
+        
+        .query-section h3 {
+            color: #ffb366;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 2px solid rgba(255, 140, 0, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        .preset-queries {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .preset-btn {
+            background: rgba(100, 50, 25, 0.9);
+            border: 2px solid rgba(139, 69, 19, 0.8);
+            color: #ffb366;
+            padding: 10px 15px;
+            font-size: 0.9em;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+        }
+        
+        .preset-btn:hover {
+            background: rgba(139, 69, 19, 0.9);
+            transform: translateY(-2px);
+        }
+        
+        .preset-btn.special {
+            background: rgba(75, 0, 130, 0.9);
+            border-color: rgba(138, 43, 226, 0.8);
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 140, 0, 0.6);
+            border-radius: 8px;
+            padding: 15px;
+            color: #ffb366;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: rgba(255, 140, 0, 1);
+            box-shadow: 0 0 10px rgba(255, 140, 0, 0.3);
+        }
+        
+        button {
+            background: linear-gradient(135deg, rgba(255, 140, 0, 0.9), rgba(255, 69, 0, 0.9));
+            border: 2px solid rgba(255, 140, 0, 0.8);
+            color: #fff;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 140, 0, 0.3);
+        }
+        
+        button:hover {
+            background: linear-gradient(135deg, rgba(255, 140, 0, 1), rgba(255, 69, 0, 1));
+            box-shadow: 0 6px 20px rgba(255, 140, 0, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: rgba(100, 100, 100, 0.5);
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .results {
+            background: rgba(20, 15, 10, 0.95);
+            border: 2px solid rgba(139, 69, 19, 0.6);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .error {
+            background: rgba(255, 0, 0, 0.2);
+            border: 2px solid rgba(255, 0, 0, 0.8);
+            color: #ff6b6b;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .success {
+            background: rgba(0, 200, 0, 0.2);
+            border: 2px solid rgba(0, 200, 0, 0.8);
+            color: #4caf50;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 140, 0, 0.3);
+            border-radius: 8px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 100%;
+        }
+        
+        th, td {
+            border: 1px solid rgba(255, 140, 0, 0.2);
+            padding: 12px;
+            text-align: left;
+            word-wrap: break-word;
+            max-width: 300px;
+        }
+        
+        th {
+            background: rgba(255, 140, 0, 0.2);
+            color: #ffb366;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        td {
+            color: #f5f5f5;
+        }
+        
+        tr:nth-child(even) {
+            background: rgba(255, 140, 0, 0.05);
+        }
+        
+        tr:hover {
+            background: rgba(255, 140, 0, 0.1);
+        }
+        
+        .json-cell {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .null-value {
+            color: #888;
+            font-style: italic;
+        }
+        
+        .number-value {
+            color: #4caf50;
+        }
+        
+        .string-value {
+            color: #ffb366;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 140, 0, 0.3);
+            border-radius: 50%;
+            border-top-color: #ff8c00;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .query-info {
+            background: rgba(0, 100, 200, 0.1);
+            border-left: 4px solid #4a9eff;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 140, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .stat-card h4 {
+            color: #ffb366;
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            font-size: 1.5em;
+            color: #4caf50;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        // Schutz: Nur Admin darf diese Seite sehen
+        (async function ensureAdmin() {
+            try {
+                const res = await fetch('/backend/api/auth.php', { credentials: 'include' });
+                const user = await res.json();
+                if (!user || user.role !== 'admin') {
+                    const redirect = encodeURIComponent(location.pathname);
+                    location.href = `/login.html?redirect=${redirect}`;
+                }
+            } catch (e) {
+                const redirect = encodeURIComponent(location.pathname);
+                location.href = `/login.html?redirect=${redirect}`;
+            }
+        })();
+    </script>
+    <div class="container">
+        <h1>🗄️ DB Admin - Datenbank Verwaltung</h1>
+        
+        <div class="warning">
+            ⚠️ <strong>Warnung:</strong> Dieses Tool ist nur für Entwicklungszwecke gedacht. 
+            Es erlaubt nur SELECT, SHOW, DESCRIBE und EXPLAIN Queries.
+        </div>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('characters')">Charaktere</button>
+            <button class="tab-btn" onclick="switchTab('items')">Items & Equipment</button>
+            <button class="tab-btn" onclick="switchTab('sessions')">Sessions & Snapshots</button>
+            <button class="tab-btn" onclick="switchTab('other')">Andere Tabellen</button>
+            <button class="tab-btn" onclick="switchTab('custom')">Custom Query</button>
+        </div>
+        
+        <!-- Characters Tab -->
+        <div id="tab-characters" class="tab-content active">
+            <div class="query-container">
+                <div class="query-section">
+                    <h3>📋 Charaktere</h3>
+                    <div class="preset-queries">
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM characters')">Alle Charaktere</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM characters WHERE id = 1')">Charakter ID 1</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT id, name, level, class, race FROM characters')">Charaktere (Kurz)</button>
+                    </div>
+                </div>
+                
+                <div class="query-section">
+                    <h3>📊 Character Stats</h3>
+                    <div class="preset-queries">
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM character_stats WHERE character_id = 1')">Stats ID 1</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT cs.*, c.name FROM character_stats cs JOIN characters c ON cs.character_id = c.id')">Stats mit Namen</button>
+                    </div>
+                </div>
+                
+                <div class="query-section">
+                    <h3>💰 Geld & Ressourcen</h3>
+                    <div class="preset-queries">
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM money WHERE character_id = 1')">Geld ID 1</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM spell_slots WHERE character_id = 1')">Spell Slots ID 1</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM death_saves WHERE character_id = 1')">Death Saves ID 1</button>
+                    </div>
+                </div>
+                
+                <div class="query-section">
+                    <h3>📝 Notizen</h3>
+                    <div class="preset-queries">
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM notes WHERE character_id = 1')">Notizen ID 1</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM notes')">Alle Notizen</button>
+                    </div>
+                </div>
+                
+                <div class="query-section">
+                    <h3>🎯 Skills</h3>
+                    <div class="preset-queries">
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM skills WHERE character_id = 1')">Skills ID 1</button>
+                    </div>
+                </div>
+                
+                <textarea id="sqlQuery" placeholder="SELECT * FROM characters WHERE id = 1">SELECT * FROM characters</textarea>
+                <button onclick="executeQuery()">▶ Query ausführen</button>
+            </div>
+        </div>
+        
+        <!-- Items Tab -->
+        <div id="tab-items" class="tab-content">
+            <div class="query-container">
+                <div class="query-section">
+                    <h3>🎒 Items</h3>
+                    <div class="preset-queries">
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM items WHERE character_id = 1')">Alle Items ID 1</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT id, name, type, category FROM items WHERE character_id = 1')">Items (Kurz)</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM items WHERE character_id = 1 AND type = \'weapon\'')">Waffen ID 1</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM items WHERE character_id = 1 AND type = \'armor\'')">Rüstungen ID 1</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM items WHERE character_id = 1 AND category = \'consumables\'')">Verbrauchsgegenstände ID 1</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM items WHERE character_id = 1 AND category = \'tools\'')">Tools ID 1</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM items WHERE character_id = 1 AND category = \'treasure\'')">Schätze ID 1</button>
+                    </div>
+                </div>
+                
+                <div class="query-section">
+                    <h3>⚔️ Equipment Slots</h3>
+                    <div class="preset-queries">
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM equipment_slots WHERE character_id = 1')">Equipment ID 1</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT es.*, i.name as item_name, i.type as item_type FROM equipment_slots es LEFT JOIN items i ON es.item_id = i.id WHERE es.character_id = 1')">Equipment mit Item-Namen</button>
+                    </div>
+                </div>
+                
+                <div class="query-section">
+                    <h3>📦 Inventory</h3>
+                    <div class="preset-queries">
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM inventory WHERE character_id = 1')">Inventory ID 1</button>
+                    </div>
+                </div>
+                
+                <textarea id="sqlQuery-items" placeholder="SELECT * FROM items WHERE character_id = 1">SELECT * FROM items WHERE character_id = 1</textarea>
+                <button onclick="executeQuery('items')">▶ Query ausführen</button>
+            </div>
+        </div>
+        
+        <!-- Sessions Tab -->
+        <div id="tab-sessions" class="tab-content">
+            <div class="query-container">
+                <div class="query-section">
+                    <h3>🎮 Sessions</h3>
+                    <div class="preset-queries">
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM sessions WHERE character_id = 1')">Sessions ID 1</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM sessions WHERE character_id = 1 AND active = 1')">Aktive Sessions ID 1</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM sessions ORDER BY created_at DESC LIMIT 10')">Letzte 10 Sessions</button>
+                    </div>
+                </div>
+                
+                <div class="query-section">
+                    <h3>📸 Snapshots</h3>
+                    <div class="preset-queries">
+                        <button class="preset-btn" onclick="setQuery('SELECT id, character_id, session_id, snapshot_type, created_at FROM session_snapshots WHERE character_id = 1 ORDER BY created_at DESC')">Snapshots ID 1</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT * FROM session_snapshots WHERE character_id = 1 ORDER BY created_at DESC LIMIT 5')">Letzte 5 Snapshots ID 1</button>
+                        <button class="preset-btn special" onclick="loadLatestSnapshot(1)">📸 Neuester Screenshot Bar-iton</button>
+                    </div>
+                </div>
+                
+                <textarea id="sqlQuery-sessions" placeholder="SELECT * FROM sessions WHERE character_id = 1">SELECT * FROM sessions WHERE character_id = 1</textarea>
+                <button onclick="executeQuery('sessions')">▶ Query ausführen</button>
+            </div>
+        </div>
+        
+        <!-- Other Tables Tab -->
+        <div id="tab-other" class="tab-content">
+            <div class="query-container">
+                <div class="query-section">
+                    <h3>🗂️ Tabellen-Informationen</h3>
+                    <div class="preset-queries">
+                        <button class="preset-btn" onclick="setQuery('SHOW TABLES')">Alle Tabellen</button>
+                        <button class="preset-btn" onclick="setQuery('DESCRIBE characters')">Characters Struktur</button>
+                        <button class="preset-btn" onclick="setQuery('DESCRIBE items')">Items Struktur</button>
+                        <button class="preset-btn" onclick="setQuery('DESCRIBE character_stats')">Stats Struktur</button>
+                        <button class="preset-btn" onclick="setQuery('DESCRIBE equipment_slots')">Equipment Struktur</button>
+                        <button class="preset-btn" onclick="setQuery('DESCRIBE sessions')">Sessions Struktur</button>
+                        <button class="preset-btn" onclick="setQuery('DESCRIBE session_snapshots')">Snapshots Struktur</button>
+                    </div>
+                </div>
+                
+                <div class="query-section">
+                    <h3>📈 Statistiken</h3>
+                    <div class="preset-queries">
+                        <button class="preset-btn" onclick="setQuery('SELECT COUNT(*) as total FROM characters')">Anzahl Charaktere</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT COUNT(*) as total FROM items')">Anzahl Items</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT COUNT(*) as total FROM sessions')">Anzahl Sessions</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT COUNT(*) as total FROM session_snapshots')">Anzahl Snapshots</button>
+                        <button class="preset-btn" onclick="setQuery('SELECT character_id, COUNT(*) as item_count FROM items GROUP BY character_id')">Items pro Charakter</button>
+                    </div>
+                </div>
+                
+                <textarea id="sqlQuery-other" placeholder="SHOW TABLES">SHOW TABLES</textarea>
+                <button onclick="executeQuery('other')">▶ Query ausführen</button>
+            </div>
+        </div>
+        
+        <!-- Custom Query Tab -->
+        <div id="tab-custom" class="tab-content">
+            <div class="query-container">
+                <div class="query-section">
+                    <h3>✏️ Custom SQL Query</h3>
+                    <div class="query-info">
+                        <strong>Hinweis:</strong> Nur SELECT, SHOW, DESCRIBE und EXPLAIN Queries sind erlaubt.<br>
+                        Tipp: Strg+Enter zum Ausführen
+                    </div>
+                </div>
+                
+                <textarea id="sqlQuery-custom" placeholder="SELECT * FROM characters">SELECT * FROM characters</textarea>
+                <button onclick="executeQuery('custom')">▶ Query ausführen</button>
+            </div>
+        </div>
+        
+        <div id="error" style="display: none;" class="error"></div>
+        
+        <div id="results" class="results" style="display: none;">
+            <h3 style="color: #ffb366; margin-bottom: 15px;">Ergebnisse:</h3>
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+    
+    <script>
+        function switchTab(tabName) {
+            // Alle Tabs verstecken
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Alle Tab-Buttons deaktivieren
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Gewählten Tab anzeigen
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        function setQuery(query, tab = null) {
+            const tabName = tab || getCurrentTab();
+            const textarea = document.getElementById(`sqlQuery${tabName === 'characters' ? '' : '-' + tabName}`);
+            if (textarea) {
+                textarea.value = query;
+            }
+        }
+        
+        function getCurrentTab() {
+            const activeTab = document.querySelector('.tab-content.active');
+            if (activeTab) {
+                return activeTab.id.replace('tab-', '');
+            }
+            return 'characters';
+        }
+        
+        async function executeQuery(tab = null) {
+            const tabName = tab || getCurrentTab();
+            const query = document.getElementById(`sqlQuery${tabName === 'characters' ? '' : '-' + tabName}`).value.trim();
+            const errorDiv = document.getElementById('error');
+            const resultsDiv = document.getElementById('results');
+            const resultsContent = document.getElementById('resultsContent');
+            
+            errorDiv.style.display = 'none';
+            resultsDiv.style.display = 'none';
+            
+            if (!query) {
+                errorDiv.innerText = 'Bitte eine SQL Query eingeben';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            resultsContent.innerHTML = '<div class="loading"></div> Führe Query aus...';
+            resultsDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/backend/api/sql.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    errorDiv.innerHTML = `<strong>Fehler:</strong> ${data.error || 'Unbekannter Fehler'}<br>${data.message || ''}`;
+                    errorDiv.style.display = 'block';
+                    resultsDiv.style.display = 'none';
+                    return;
+                }
+                
+                if (data.success && data.rows) {
+                    if (data.rows.length === 0) {
+                        resultsContent.innerHTML = '<div class="success">✓ Query erfolgreich ausgeführt, aber keine Ergebnisse gefunden.</div>';
+                    } else {
+                        const table = createFormattedTable(data.rows);
+                        resultsContent.innerHTML = `<div class="success">✓ ${data.count} Zeile(n) gefunden</div>${table}`;
+                    }
+                } else {
+                    resultsContent.innerHTML = '<div class="error">Unerwartetes Antwortformat</div>';
+                }
+                
+            } catch (error) {
+                errorDiv.innerHTML = `<strong>Fehler:</strong> ${error.message}`;
+                errorDiv.style.display = 'block';
+                resultsDiv.style.display = 'none';
+            }
+        }
+        
+        function createFormattedTable(rows) {
+            if (rows.length === 0) return '';
+            
+            const headers = Object.keys(rows[0]);
+            
+            let html = '<div class="table-container"><table><thead><tr>';
+            headers.forEach(header => {
+                html += `<th>${escapeHtml(header)}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            rows.forEach(row => {
+                html += '<tr>';
+                headers.forEach(header => {
+                    const value = row[header];
+                    html += `<td>${formatCellValue(value)}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table></div>';
+            return html;
+        }
+        
+        function formatCellValue(value) {
+            if (value === null || value === undefined) {
+                return '<span class="null-value">NULL</span>';
+            }
+            
+            const strValue = String(value);
+            
+            // Prüfe ob es JSON ist
+            if (strValue.startsWith('{') || strValue.startsWith('[')) {
+                try {
+                    const json = JSON.parse(strValue);
+                    return `<div class="json-cell">${escapeHtml(JSON.stringify(json, null, 2))}</div>`;
+                } catch (e) {
+                    // Nicht valides JSON, normal anzeigen
+                }
+            }
+            
+            // Prüfe ob es eine Zahl ist
+            if (!isNaN(value) && !isNaN(parseFloat(value)) && isFinite(value)) {
+                return `<span class="number-value">${escapeHtml(strValue)}</span>`;
+            }
+            
+            // Prüfe ob es ein Boolean ist
+            if (value === true || value === false || value === '1' || value === '0') {
+                const boolValue = value === true || value === '1' || value === 1;
+                return `<span class="number-value">${boolValue ? '✓' : '✗'}</span>`;
+            }
+            
+            // Lange Strings kürzen
+            if (strValue.length > 100) {
+                return `<span class="string-value" title="${escapeHtml(strValue)}">${escapeHtml(strValue.substring(0, 100))}...</span>`;
+            }
+            
+            return `<span class="string-value">${escapeHtml(strValue)}</span>`;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Enter + Strg zum Ausführen für alle Textareas
+        document.querySelectorAll('textarea[id^="sqlQuery"]').forEach(textarea => {
+            textarea.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    const tab = this.id.replace('sqlQuery', '').replace('-', '') || 'characters';
+                    executeQuery(tab);
+                }
+            });
+        });
+        
+        // Lade neuesten Screenshot für Character ID
+        async function loadLatestSnapshot(characterId) {
+            const errorDiv = document.getElementById('error');
+            const resultsDiv = document.getElementById('results');
+            const resultsContent = document.getElementById('resultsContent');
+            
+            errorDiv.style.display = 'none';
+            resultsDiv.style.display = 'none';
+            resultsContent.innerHTML = '<div class="loading"></div> Lade neuesten Screenshot...';
+            resultsDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch(`/backend/api/sessions.php?character_id=${characterId}&latest_snapshot=true`);
+                const data = await response.json();
+                
+                if (!response.ok || data.error) {
+                    errorDiv.innerHTML = `<strong>Fehler:</strong> ${data.error || 'Kein Screenshot gefunden'}`;
+                    errorDiv.style.display = 'block';
+                    resultsDiv.style.display = 'none';
+                    return;
+                }
+                
+                // Zeige Screenshot-Informationen
+                const snapshot = data;
+                const characterData = snapshot.character_data || {};
+                
+                let html = '<div style="margin-bottom: 20px;">';
+                html += `<h4 style="color: #ffb366; margin-bottom: 10px;">Screenshot Informationen:</h4>`;
+                html += `<div class="stats-grid">`;
+                html += `<div class="stat-card"><h4>ID</h4><div class="stat-value">${snapshot.id}</div></div>`;
+                html += `<div class="stat-card"><h4>Typ</h4><div class="stat-value">${snapshot.snapshot_type}</div></div>`;
+                html += `<div class="stat-card"><h4>Character ID</h4><div class="stat-value">${snapshot.character_id}</div></div>`;
+                html += `<div class="stat-card"><h4>Session ID</h4><div class="stat-value">${snapshot.session_id || 'Keine'}</div></div>`;
+                html += `</div>`;
+                html += `<p><strong>Erstellt am:</strong> ${snapshot.created_at}</p>`;
+                html += '</div>';
+                
+                html += '<div style="margin-bottom: 20px;">';
+                html += `<h4 style="color: #ffb366; margin-bottom: 10px;">Character-Daten im Screenshot:</h4>`;
+                html += `<p><strong>Name:</strong> ${characterData.name || 'N/A'}</p>`;
+                html += `<p><strong>Level:</strong> ${characterData.level || 'N/A'}</p>`;
+                html += `<p><strong>Klasse:</strong> ${characterData.class || 'N/A'}</p>`;
+                html += `<p><strong>Rasse:</strong> ${characterData.race || 'N/A'}</p>`;
+                html += '</div>';
+                
+                // Stats
+                if (characterData.stats) {
+                    html += '<div style="margin-bottom: 20px;">';
+                    html += `<h4 style="color: #ffb366; margin-bottom: 10px;">Stats:</h4>`;
+                    html += `<div class="stats-grid">`;
+                    html += `<div class="stat-card"><h4>HP</h4><div class="stat-value">${characterData.stats.current_hp || 0}/${characterData.stats.max_hp || 0}</div></div>`;
+                    html += `<div class="stat-card"><h4>Temp HP</h4><div class="stat-value">${characterData.stats.temp_hp || 0}</div></div>`;
+                    html += `<div class="stat-card"><h4>AC</h4><div class="stat-value">${characterData.stats.armor_class || 0}</div></div>`;
+                    html += `</div>`;
+                    html += '</div>';
+                }
+                
+                // Equipment
+                if (characterData.equipment) {
+                    html += '<div style="margin-bottom: 20px;">';
+                    html += `<h4 style="color: #ffb366; margin-bottom: 10px;">Ausgerüstete Items:</h4>`;
+                    if (characterData.equipment.armor) {
+                        html += `<p><strong>Rüstung:</strong> ${characterData.equipment.armor.name || 'N/A'}</p>`;
+                    } else {
+                        html += `<p><strong>Rüstung:</strong> Keine</p>`;
+                    }
+                    if (characterData.equipment.mainhand) {
+                        html += `<p><strong>Haupthand:</strong> ${characterData.equipment.mainhand.name || 'N/A'}</p>`;
+                    } else {
+                        html += `<p><strong>Haupthand:</strong> Keine</p>`;
+                    }
+                    if (characterData.equipment.offhand) {
+                        html += `<p><strong>Nebenhand:</strong> ${characterData.equipment.offhand.name || 'N/A'}</p>`;
+                    } else {
+                        html += `<p><strong>Nebenhand:</strong> Keine</p>`;
+                    }
+                    html += '</div>';
+                }
+                
+                // Inventory
+                if (characterData.inventory) {
+                    const inventory = Array.isArray(characterData.inventory) ? characterData.inventory : 
+                        (characterData.inventory.equipment || []).concat(
+                            characterData.inventory.consumables || [],
+                            characterData.inventory.tools || [],
+                            characterData.inventory.treasure || []
+                        );
+                    html += '<div style="margin-bottom: 20px;">';
+                    html += `<h4 style="color: #ffb366; margin-bottom: 10px;">Inventar (${inventory.length} Items):</h4>`;
+                    if (inventory.length > 0) {
+                        const table = createFormattedTable(inventory.slice(0, 50));
+                        html += table;
+                        if (inventory.length > 50) {
+                            html += `<p style="color: #ffb366; margin-top: 10px;">... und ${inventory.length - 50} weitere Items</p>`;
+                        }
+                    } else {
+                        html += '<p>Keine Items im Inventar</p>';
+                    }
+                    html += '</div>';
+                }
+                
+                // Money
+                if (characterData.money) {
+                    html += '<div style="margin-bottom: 20px;">';
+                    html += `<h4 style="color: #ffb366; margin-bottom: 10px;">Geld:</h4>`;
+                    html += `<p><strong>Gold:</strong> ${characterData.money.gold || 0}, <strong>Silber:</strong> ${characterData.money.silver || 0}, <strong>Kupfer:</strong> ${characterData.money.copper || 0}</p>`;
+                    html += '</div>';
+                }
+                
+                // Spell Slots
+                if (characterData.spellSlots) {
+                    html += '<div style="margin-bottom: 20px;">';
+                    html += `<h4 style="color: #ffb366; margin-bottom: 10px;">Zauberplätze:</h4>`;
+                    html += `<p>${characterData.spellSlots.length} Slots, ${characterData.spellSlots.filter(s => s).length} benutzt</p>`;
+                    html += '</div>';
+                }
+                
+                // Notes
+                if (characterData.notes) {
+                    html += '<div style="margin-bottom: 20px;">';
+                    html += `<h4 style="color: #ffb366; margin-bottom: 10px;">Notizen:</h4>`;
+                    
+                    ['adventure', 'character', 'performance'].forEach(type => {
+                        const note = characterData.notes[type];
+                        const typeName = type.charAt(0).toUpperCase() + type.slice(1);
+                        if (note) {
+                            const preview = note.length > 100 ? note.substring(0, 100) + '...' : note;
+                            html += '<p><strong>' + typeName + '-Notizen:</strong> ' + escapeHtml(preview) + '</p>';
+                        } else {
+                            html += '<p><strong>' + typeName + '-Notizen:</strong> <em style="color: #888;">Keine</em></p>';
+                        }
+                    });
+                    
+                    html += '<details style="margin-top: 10px;">';
+                    html += '<summary style="color: #ffb366; cursor: pointer; margin-bottom: 10px;"><strong>Vollständige Notizen anzeigen</strong></summary>';
+                    html += '<div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; max-height: 400px; overflow-y: auto;">';
+                    ['adventure', 'character', 'performance'].forEach(type => {
+                        const typeName = type.charAt(0).toUpperCase() + type.slice(1);
+                        html += '<div style="margin-bottom: 15px;">';
+                        html += '<strong style="color: #ffb366;">' + typeName + '-Notizen:</strong>';
+                        html += '<pre style="white-space: pre-wrap; word-wrap: break-word; margin-top: 5px; color: #f5f5f5;">' + escapeHtml(characterData.notes[type] || 'Keine Notizen') + '</pre>';
+                        html += '</div>';
+                    });
+                    html += '</div></details></div>';
+                }
+                
+                // Vollständige JSON-Daten (kollabierbar)
+                html += '<details style="margin-top: 20px;">';
+                html += '<summary style="color: #ffb366; cursor: pointer; margin-bottom: 10px;"><strong>Vollständige JSON-Daten anzeigen</strong></summary>';
+                html += `<pre style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; overflow-x: auto; max-height: 500px; overflow-y: auto; font-size: 12px;">${JSON.stringify(characterData, null, 2)}</pre>`;
+                html += '</details>';
+                
+                resultsContent.innerHTML = html;
+                resultsDiv.style.display = 'block';
+                
+            } catch (error) {
+                errorDiv.innerHTML = `<strong>Fehler:</strong> ${error.message}`;
+                errorDiv.style.display = 'block';
+                resultsDiv.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

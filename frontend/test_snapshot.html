@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screenshot Test - Items & Notizen</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0a;
+            color: #f5f5f5;
+            padding: 20px;
+        }
+        .section {
+            background: rgba(20, 15, 10, 0.95);
+            border: 2px solid rgba(139, 69, 19, 0.6);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        h1 { color: #ff8c00; }
+        h2 { color: #ffb366; margin-top: 0; }
+        button {
+            background: linear-gradient(135deg, rgba(255, 140, 0, 0.9), rgba(255, 69, 0, 0.9));
+            border: 2px solid rgba(255, 140, 0, 0.8);
+            color: #fff;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: linear-gradient(135deg, rgba(255, 140, 0, 1), rgba(255, 69, 0, 1));
+        }
+        .success { color: #4caf50; }
+        .error { color: #ff6b6b; }
+        .info { color: #ffb366; }
+        pre {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Screenshot Test - Items & Notizen</h1>
+    
+    <div class="section">
+        <h2>Test 1: Screenshot erstellen und prüfen</h2>
+        <button onclick="testCreateSnapshot()">1. Screenshot erstellen</button>
+        <button onclick="testLoadLatestSnapshot()">2. Neuesten Screenshot laden</button>
+        <button onclick="testCompareData()">3. Daten vergleichen</button>
+        <div id="test1Result"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Test 2: Items prüfen</h2>
+        <button onclick="testItems()">Items in Screenshot prüfen</button>
+        <div id="test2Result"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Test 3: Notizen prüfen</h2>
+        <button onclick="testNotes()">Notizen in Screenshot prüfen</button>
+        <div id="test3Result"></div>
+    </div>
+
+    <script>
+        const characterId = 1;
+        
+        async function testCreateSnapshot() {
+            const resultEl = document.getElementById('test1Result');
+            resultEl.innerHTML = '<p class="info">Erstelle Screenshot...</p>';
+            
+            try {
+                // Sammle aktuelle Daten
+                let characterData = null;
+                if (window.CharacterDataManagerAPI) {
+                    const manager = new window.CharacterDataManagerAPI(characterId);
+                    characterData = manager.collectData();
+                }
+                
+                // Erstelle Screenshot
+                const response = await fetch('/backend/api/sessions.php?action=snapshot', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        character_id: characterId,
+                        character_data: characterData
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultEl.innerHTML = `
+                        <p class="success">✓ Screenshot erstellt (ID: ${data.snapshot_id})</p>
+                        <p class="info">Gesendete Daten:</p>
+                        <pre>${JSON.stringify({
+                            hasEquipment: !!characterData?.equipment,
+                            equipmentCount: characterData?.equipment ? Object.keys(characterData.equipment).filter(k => characterData.equipment[k]).length : 0,
+                            hasInventory: !!characterData?.inventory,
+                            inventoryCount: characterData?.inventory ? 
+                                (Array.isArray(characterData.inventory) ? characterData.inventory.length : 
+                                 Object.keys(characterData.inventory).reduce((sum, key) => sum + (characterData.inventory[key]?.length || 0), 0)) : 0,
+                            hasNotes: !!characterData?.notes,
+                            notes: characterData?.notes ? {
+                                adventure: characterData.notes.adventure?.substring(0, 50) || 'leer',
+                                character: characterData.notes.character?.substring(0, 50) || 'leer',
+                                performance: characterData.notes.performance?.substring(0, 50) || 'leer'
+                            } : null
+                        }, null, 2)}</pre>
+                    `;
+                } else {
+                    throw new Error(data.error || 'Fehler beim Erstellen');
+                }
+            } catch (error) {
+                resultEl.innerHTML = `<p class="error">FEHLER: ${error.message}</p>`;
+            }
+        }
+        
+        async function testLoadLatestSnapshot() {
+            const resultEl = document.getElementById('test1Result');
+            resultEl.innerHTML = '<p class="info">Lade neuesten Screenshot...</p>';
+            
+            try {
+                const response = await fetch(`/backend/api/sessions.php?character_id=${characterId}&latest_snapshot=true`);
+                const snapshot = await response.json();
+                
+                if (snapshot.error) {
+                    throw new Error(snapshot.error);
+                }
+                
+                const charData = snapshot.character_data || {};
+                
+                resultEl.innerHTML = `
+                    <p class="success">✓ Screenshot geladen (ID: ${snapshot.id}, erstellt: ${snapshot.created_at})</p>
+                    <p class="info">Daten im Screenshot:</p>
+                    <pre>${JSON.stringify({
+                        hasEquipment: !!charData.equipment,
+                        equipmentCount: charData.equipment ? Object.keys(charData.equipment).filter(k => charData.equipment[k]).length : 0,
+                        hasInventory: !!charData.inventory,
+                        inventoryCount: charData.inventory ? 
+                            (Array.isArray(charData.inventory) ? charData.inventory.length : 
+                             Object.keys(charData.inventory).reduce((sum, key) => sum + (charData.inventory[key]?.length || 0), 0)) : 0,
+                        hasNotes: !!charData.notes,
+                        notes: charData.notes ? {
+                            adventure: charData.notes.adventure?.substring(0, 50) || 'leer',
+                            character: charData.notes.character?.substring(0, 50) || 'leer',
+                            performance: charData.notes.performance?.substring(0, 50) || 'leer'
+                        } : null
+                    }, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultEl.innerHTML = `<p class="error">FEHLER: ${error.message}</p>`;
+            }
+        }
+        
+        async function testCompareData() {
+            const resultEl = document.getElementById('test1Result');
+            resultEl.innerHTML = '<p class="info">Vergleiche aktuelle Daten mit Screenshot...</p>';
+            
+            try {
+                // Hole aktuelle Character-Daten
+                const charResponse = await fetch(`/backend/api/characters.php?id=${characterId}`);
+                const currentChar = await charResponse.json();
+                
+                // Hole neuesten Screenshot
+                const snapshotResponse = await fetch(`/backend/api/sessions.php?character_id=${characterId}&latest_snapshot=true`);
+                const snapshot = await snapshotResponse.json();
+                
+                if (snapshot.error) {
+                    throw new Error('Kein Screenshot vorhanden');
+                }
+                
+                const snapshotChar = snapshot.character_data || {};
+                
+                // Vergleiche Items
+                const currentItems = [];
+                if (currentChar.inventory) {
+                    const items = Array.isArray(currentChar.inventory) ? currentChar.inventory : 
+                        [].concat(
+                            currentChar.inventory.equipment || [],
+                            currentChar.inventory.consumables || [],
+                            currentChar.inventory.tools || [],
+                            currentChar.inventory.treasure || []
+                        );
+                    currentItems.push(...items.map(i => i.name || 'Unbekannt'));
+                }
+                
+                const snapshotItems = [];
+                if (snapshotChar.inventory) {
+                    const items = Array.isArray(snapshotChar.inventory) ? snapshotChar.inventory : 
+                        [].concat(
+                            snapshotChar.inventory.equipment || [],
+                            snapshotChar.inventory.consumables || [],
+                            snapshotChar.inventory.tools || [],
+                            snapshotChar.inventory.treasure || []
+                        );
+                    snapshotItems.push(...items.map(i => i.name || 'Unbekannt'));
+                }
+                
+                // Vergleiche Notizen
+                const currentNotes = {
+                    adventure: currentChar.notes?.adventure || '',
+                    character: currentChar.notes?.character || '',
+                    performance: currentChar.notes?.performance || ''
+                };
+                
+                const snapshotNotes = {
+                    adventure: snapshotChar.notes?.adventure || '',
+                    character: snapshotChar.notes?.character || '',
+                    performance: snapshotChar.notes?.performance || ''
+                };
+                
+                resultEl.innerHTML = `
+                    <p class="success">✓ Vergleich abgeschlossen</p>
+                    <p class="info">Aktuelle Items: ${currentItems.length}, Screenshot Items: ${snapshotItems.length}</p>
+                    <p class="info">Notizen gleich: ${JSON.stringify(currentNotes) === JSON.stringify(snapshotNotes) ? 'Ja' : 'Nein'}</p>
+                    <details>
+                        <summary style="color: #ffb366; cursor: pointer;">Details anzeigen</summary>
+                        <pre>${JSON.stringify({
+                            items: {
+                                aktuell: currentItems,
+                                screenshot: snapshotItems,
+                                gleich: JSON.stringify(currentItems.sort()) === JSON.stringify(snapshotItems.sort())
+                            },
+                            notes: {
+                                aktuell: currentNotes,
+                                screenshot: snapshotNotes,
+                                gleich: JSON.stringify(currentNotes) === JSON.stringify(snapshotNotes)
+                            }
+                        }, null, 2)}</pre>
+                    </details>
+                `;
+            } catch (error) {
+                resultEl.innerHTML = `<p class="error">FEHLER: ${error.message}</p>`;
+            }
+        }
+        
+        async function testItems() {
+            const resultEl = document.getElementById('test2Result');
+            resultEl.innerHTML = '<p class="info">Prüfe Items...</p>';
+            
+            try {
+                const response = await fetch(`/backend/api/sessions.php?character_id=${characterId}&latest_snapshot=true`);
+                const snapshot = await response.json();
+                
+                if (snapshot.error) {
+                    throw new Error(snapshot.error);
+                }
+                
+                const charData = snapshot.character_data || {};
+                
+                let items = [];
+                if (charData.equipment) {
+                    if (charData.equipment.armor) items.push({...charData.equipment.armor, location: 'Equipment: Rüstung'});
+                    if (charData.equipment.mainhand) items.push({...charData.equipment.mainhand, location: 'Equipment: Haupthand'});
+                    if (charData.equipment.offhand) items.push({...charData.equipment.offhand, location: 'Equipment: Nebenhand'});
+                }
+                
+                if (charData.inventory) {
+                    const invItems = Array.isArray(charData.inventory) ? charData.inventory : 
+                        [].concat(
+                            charData.inventory.equipment || [],
+                            charData.inventory.consumables || [],
+                            charData.inventory.tools || [],
+                            charData.inventory.treasure || []
+                        );
+                    invItems.forEach(item => {
+                        items.push({...item, location: `Inventar: ${item.category || 'unknown'}`});
+                    });
+                }
+                
+                resultEl.innerHTML = `
+                    <p class="success">✓ ${items.length} Items gefunden</p>
+                    <pre>${JSON.stringify(items.map(i => ({
+                        name: i.name,
+                        type: i.type,
+                        category: i.category,
+                        location: i.location,
+                        id: i.id
+                    })), null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultEl.innerHTML = `<p class="error">FEHLER: ${error.message}</p>`;
+            }
+        }
+        
+        async function testNotes() {
+            const resultEl = document.getElementById('test3Result');
+            resultEl.innerHTML = '<p class="info">Prüfe Notizen...</p>';
+            
+            try {
+                const response = await fetch(`/backend/api/sessions.php?character_id=${characterId}&latest_snapshot=true`);
+                const snapshot = await response.json();
+                
+                if (snapshot.error) {
+                    throw new Error(snapshot.error);
+                }
+                
+                const charData = snapshot.character_data || {};
+                const notes = charData.notes || {};
+                
+                resultEl.innerHTML = `
+                    <p class="success">✓ Notizen gefunden</p>
+                    <p><strong>Abenteuer-Notizen:</strong></p>
+                    <pre style="white-space: pre-wrap;">${notes.adventure || '(leer)'}</pre>
+                    <p><strong>Charakter-Notizen:</strong></p>
+                    <pre style="white-space: pre-wrap;">${notes.character || '(leer)'}</pre>
+                    <p><strong>Auftritts-Notizen:</strong></p>
+                    <pre style="white-space: pre-wrap;">${notes.performance || '(leer)'}</pre>
+                `;
+            } catch (error) {
+                resultEl.innerHTML = `<p class="error">FEHLER: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
+
+

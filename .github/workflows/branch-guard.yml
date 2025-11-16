@@ -1,0 +1,25 @@
+name: Branch Guard
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  guard-direct-push:
+    name: Disallow direct pushes to protected branches
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check event and ref
+        run: |
+          echo "event: ${{ github.event_name }}"
+          echo "ref:   ${{ github.ref }}"
+          # Allow CI to run, but fail if it's a direct push to main/master (no PR)
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "::error::Direct pushes to main/master are not allowed. Open a PR from a feature branch."
+            exit 1
+          fi
+          echo "OK"
+
+
