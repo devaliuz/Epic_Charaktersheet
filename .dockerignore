@@ -1,0 +1,32 @@
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Docker
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Environment
+.env
+.env.*
+
+# Logs
+*.log
+logs/
+
+# Backup
+*.sql
+backup/
+*.backup
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+

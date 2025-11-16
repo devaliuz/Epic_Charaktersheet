@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar-iton - Alle Daten</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #f5f5f5;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .section {
+            background: rgba(20, 15, 10, 0.95);
+            border: 2px solid rgba(139, 69, 19, 0.6);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        h1 { color: #ff8c00; }
+        h2 { color: #ffb366; margin-top: 0; }
+        .label { color: #ffb366; font-weight: bold; }
+        .value { color: #f5f5f5; }
+        .notes { 
+            background: rgba(0,0,0,0.5); 
+            padding: 15px; 
+            border-radius: 8px; 
+            white-space: pre-wrap; 
+            word-wrap: break-word;
+            margin-top: 10px;
+        }
+        .error { color: #ff6b6b; }
+        .loading { color: #ffb366; }
+    </style>
+</head>
+<body>
+    <h1>📋 Alle Daten für Bar-iton (Character ID: 1)</h1>
+    <div id="loading" class="loading">Lade Daten von der API...</div>
+    <div id="content"></div>
+
+    <script>
+        async function loadCharacterData() {
+            const loadingEl = document.getElementById('loading');
+            const contentEl = document.getElementById('content');
+            
+            try {
+                const response = await fetch('/backend/api/characters.php?id=1');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const character = await response.json();
+                
+                if (!character || character.error) {
+                    throw new Error(character.error || 'Keine Daten erhalten');
+                }
+                
+                loadingEl.style.display = 'none';
+                
+                let html = '';
+                
+                // Basis-Informationen
+                html += '<div class="section">';
+                html += '<h2>📋 Basis-Informationen</h2>';
+                html += `<p><span class="label">ID:</span> <span class="value">${character.id || 'N/A'}</span></p>`;
+                html += `<p><span class="label">Name:</span> <span class="value">${character.name || 'N/A'}</span></p>`;
+                html += `<p><span class="label">Level:</span> <span class="value">${character.level || 'N/A'}</span></p>`;
+                html += `<p><span class="label">Klasse:</span> <span class="value">${character.class || 'N/A'}</span></p>`;
+                html += `<p><span class="label">Rasse:</span> <span class="value">${character.race || 'N/A'}</span></p>`;
+                html += `<p><span class="label">Hintergrund:</span> <span class="value">${character.background || 'N/A'}</span></p>`;
+                html += `<p><span class="label">Ausrichtung:</span> <span class="value">${character.alignment || 'N/A'}</span></p>`;
+                html += `<p><span class="label">Portrait-Modus:</span> <span class="value">${character.portrait_mode || 'N/A'}</span></p>`;
+                html += '</div>';
+                
+                // Stats
+                if (character.stats) {
+                    const s = character.stats;
+                    html += '<div class="section">';
+                    html += '<h2>📊 Stats</h2>';
+                    html += '<p><span class="label">Attribute:</span></p>';
+                    html += `<p style="margin-left: 20px;">STR: ${s.str || 0}, DEX: ${s.dex || 0}, CON: ${s.con || 0}</p>`;
+                    html += `<p style="margin-left: 20px;">INT: ${s.int || s.int_stat || 0}, WIS: ${s.wis || 0}, CHA: ${s.cha || 0}</p>`;
+                    html += `<p><span class="label">HP:</span> <span class="value">${s.current_hp || 0}/${s.max_hp || 0} (Temp: ${s.temp_hp || 0})</span></p>`;
+                    html += `<p><span class="label">AC:</span> <span class="value">${s.armor_class || 0}</span></p>`;
+                    html += `<p><span class="label">Geübtheitsbonus:</span> <span class="value">${s.proficiency_bonus || 0}</span></p>`;
+                    html += `<p><span class="label">XP:</span> <span class="value">${s.current_xp || 0}</span></p>`;
+                    html += `<p><span class="label">Bardische Inspiration:</span> <span class="value">${s.current_bi || 0}/${s.max_bi || 0}</span></p>`;
+                    html += `<p><span class="label">Hit Dice:</span> <span class="value">${s.current_hd || 0}/${s.max_hd || 0}</span></p>`;
+                    html += '</div>';
+                }
+                
+                // Equipment
+                if (character.equipment) {
+                    html += '<div class="section">';
+                    html += '<h2>⚔️ Ausgerüstete Items</h2>';
+                    const eq = character.equipment;
+                    html += `<p><span class="label">Rüstung:</span> <span class="value">${eq.armor ? (eq.armor.name || 'Unbekannt') : 'Keine'}</span></p>`;
+                    html += `<p><span class="label">Haupthand:</span> <span class="value">${eq.mainhand ? (eq.mainhand.name || 'Unbekannt') : 'Keine'}</span></p>`;
+                    html += `<p><span class="label">Nebenhand:</span> <span class="value">${eq.offhand ? (eq.offhand.name || 'Unbekannt') : 'Keine'}</span></p>`;
+                    html += '</div>';
+                }
+                
+                // Inventory
+                if (character.inventory) {
+                    const inv = character.inventory;
+                    const items = Array.isArray(inv) ? inv : 
+                        [].concat(
+                            inv.equipment || [],
+                            inv.consumables || [],
+                            inv.tools || [],
+                            inv.treasure || []
+                        );
+                    
+                    html += '<div class="section">';
+                    html += `<h2>🎒 Inventar (${items.length} Items)</h2>`;
+                    if (items.length > 0) {
+                        html += '<ul>';
+                        items.forEach(item => {
+                            html += `<li>${item.name || 'Unbekannt'} (${item.type || 'N/A'}/${item.category || 'N/A'})</li>`;
+                        });
+                        html += '</ul>';
+                    } else {
+                        html += '<p>Keine Items</p>';
+                    }
+                    html += '</div>';
+                }
+                
+                // Money
+                if (character.money) {
+                    html += '<div class="section">';
+                    html += '<h2>💰 Geld</h2>';
+                    html += `<p><span class="label">Gold:</span> <span class="value">${character.money.gold || 0}</span></p>`;
+                    html += `<p><span class="label">Silber:</span> <span class="value">${character.money.silver || 0}</span></p>`;
+                    html += `<p><span class="label">Kupfer:</span> <span class="value">${character.money.copper || 0}</span></p>`;
+                    html += '</div>';
+                }
+                
+                // Spell Slots
+                if (character.spellSlots) {
+                    const slots = character.spellSlots;
+                    const used = slots.filter(s => s === true).length;
+                    html += '<div class="section">';
+                    html += '<h2>✨ Zauberplätze</h2>';
+                    html += `<p><span class="label">Gesamt:</span> <span class="value">${slots.length}</span></p>`;
+                    html += `<p><span class="label">Benutzt:</span> <span class="value">${used}</span></p>`;
+                    html += `<p><span class="label">Verfügbar:</span> <span class="value">${slots.length - used}</span></p>`;
+                    html += '</div>';
+                }
+                
+                // NOTIZEN - DAS IST WICHTIG!
+                html += '<div class="section">';
+                html += '<h2>📝 NOTIZEN</h2>';
+                
+                if (character.notes) {
+                    const notes = character.notes;
+                    
+                    html += '<p><span class="label">Abenteuer-Notizen:</span></p>';
+                    if (notes.adventure && notes.adventure.trim()) {
+                        html += `<div class="notes">${escapeHtml(notes.adventure)}</div>`;
+                    } else {
+                        html += '<p style="color: #888; font-style: italic;">Keine Abenteuer-Notizen</p>';
+                    }
+                    
+                    html += '<p style="margin-top: 20px;"><span class="label">Charakter-Notizen:</span></p>';
+                    if (notes.character && notes.character.trim()) {
+                        html += `<div class="notes">${escapeHtml(notes.character)}</div>`;
+                    } else {
+                        html += '<p style="color: #888; font-style: italic;">Keine Charakter-Notizen</p>';
+                    }
+                    
+                    html += '<p style="margin-top: 20px;"><span class="label">Auftritts-Notizen:</span></p>';
+                    if (notes.performance && notes.performance.trim()) {
+                        html += `<div class="notes">${escapeHtml(notes.performance)}</div>`;
+                    } else {
+                        html += '<p style="color: #888; font-style: italic;">Keine Auftritts-Notizen</p>';
+                    }
+                } else {
+                    html += '<p style="color: #888; font-style: italic;">Keine Notizen gefunden</p>';
+                }
+                
+                html += '</div>';
+                
+                // Skills
+                if (character.skills && character.skills.length > 0) {
+                    html += '<div class="section">';
+                    html += '<h2>🎯 Skills</h2>';
+                    html += '<ul>';
+                    character.skills.forEach(skill => {
+                        const prof = skill.proficient ? 'Ja' : 'Nein';
+                        const exp = skill.expertise ? 'Ja' : 'Nein';
+                        html += `<li>${skill.skill_name}: Proficient=${prof}, Expertise=${exp}, Bonus=${skill.bonus || 0}</li>`;
+                    });
+                    html += '</ul>';
+                    html += '</div>';
+                }
+                
+                // Death Saves
+                if (character.deathSaves) {
+                    const ds = character.deathSaves;
+                    const successes = Array.isArray(ds.successes) ? ds.successes.length : (ds.successes || 0);
+                    const failures = Array.isArray(ds.failures) ? ds.failures.length : (ds.failures || 0);
+                    html += '<div class="section">';
+                    html += '<h2>💀 Todesrettungswürfe</h2>';
+                    html += `<p><span class="label">Erfolge:</span> <span class="value">${successes}/3</span></p>`;
+                    html += `<p><span class="label">Fehlschläge:</span> <span class="value">${failures}/3</span></p>`;
+                    html += '</div>';
+                }
+                
+                contentEl.innerHTML = html;
+                
+            } catch (error) {
+                loadingEl.innerHTML = `<span class="error">FEHLER: ${error.message}</span>`;
+                console.error('Fehler beim Laden der Daten:', error);
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Lade Daten beim Start
+        loadCharacterData();
+    </script>
+</body>
+</html>
+
+

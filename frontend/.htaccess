@@ -1,0 +1,13 @@
+# Apache Konfiguration für Frontend
+RewriteEngine On
+
+# Enable CORS
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+</IfModule>
+
+# Fallback auf index.html für Single Page Application
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.html [L]
+

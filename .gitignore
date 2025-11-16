@@ -1,0 +1,132 @@
+############################
+# System/OS
+############################
+Thumbs.db
+desktop.ini
+.DS_Store
+$RECYCLE.BIN/
+
+############################
+# IDE/Editor
+############################
+.vscode/
+.idea/
+*.code-workspace
+
+############################
+# Logs & Temp
+############################
+*.log
+logs/
+tmp/
+temp/
+.temp/
+.cache/
+cache/
+*.tmp
+
+############################
+# Env/Secrets
+############################
+.env
+.env.*.local
+.env.local
+
+############################
+# Node (falls lokal genutzt)
+############################
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+############################
+# PHP/Composer (falls genutzt)
+############################
+vendor/
+composer.lock
+
+############################
+# Python (falls genutzt)
+############################
+__pycache__/
+*.py[cod]
+.python-version
+.pytest_cache/
+.venv/
+venv/
+
+############################
+# Build/Dist/Artifacts
+############################
+dist/
+build/
+coverage/
+.nyc_output/
+
+############################
+# Docker
+############################
+.docker/
+.env.docker
+
+############################
+# Misc
+############################
+*.swp
+*.swo
+*.orig
+*.bak
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.log
+
+# Node / Frontend (falls später genutzt)
+node_modules/
+dist/
+build/
+
+# PHP / Composer (falls später genutzt)
+vendor/
+
+# IDE
+.idea/
+.vscode/
+
+# Docker artifacts
+*.pid
+
+# Docker
+.env
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+
+# Backup
+*.sql
+backup/
+*.backup
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.db
+*.sqlite
+
+# Node (falls später verwendet)
+node_modules/
+package-lock.json
+

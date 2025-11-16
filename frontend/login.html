@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Login</title>
+	<style>
+		body { font-family: Segoe UI, Arial, sans-serif; background: #111; color: #eee; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+		.card { background: #1b1b1b; border: 1px solid #333; border-radius: 10px; padding: 24px; width: 360px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+		h1 { margin: 0 0 16px; color: #ffb366; font-size: 20px; }
+		label { display: block; margin: 12px 0 6px; color: #ccc; font-size: 14px; }
+		input { width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid #444; background: #0f0f0f; color: #eee; }
+		button { width: 100%; margin-top: 16px; padding: 12px; border-radius: 8px; border: 0; cursor: pointer; background: linear-gradient(135deg, rgba(255,140,0,.9), rgba(255,69,0,.9)); color: #fff; font-weight: 600; }
+		.error { background: rgba(255,0,0,.1); border: 1px solid rgba(255,0,0,.5); color: #ff7777; padding: 10px; border-radius: 6px; margin-bottom: 10px; display: none; }
+		.info { color: #aaa; font-size: 12px; margin-top: 10px; }
+	</style>
+	<script>
+		// Entfernt: automatische Weiterleitung bei bestehender Session (vermeidet Redirect-Loops)
+		// Die Seite leitet jetzt nur noch nach erfolgreichem Login weiter.
+
+		async function doLogin(ev) {
+			ev.preventDefault();
+			const errorEl = document.getElementById('error');
+			errorEl.style.display = 'none';
+			const username = document.getElementById('username').value.trim();
+			const password = document.getElementById('password').value;
+			if (!username || !password) {
+				errorEl.textContent = 'Bitte Benutzername und Passwort eingeben.';
+				errorEl.style.display = 'block';
+				return;
+			}
+			try {
+				const res = await fetch('/backend/api/auth.php?action=login', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					credentials: 'include',
+					body: JSON.stringify({ username, password })
+				});
+				// Robust: Text lesen und JSON parsen, bei Fehler Rohtext anzeigen
+				const raw = await res.text();
+				let data = null;
+				try { data = JSON.parse(raw); } catch (e) {
+					throw new Error(`Unerwartete Antwort (kein JSON): ${raw.substring(0, 200)}${raw.length>200?'...':''}`);
+				}
+				if (!res.ok || !data?.success) {
+					throw new Error(data?.error || 'Login fehlgeschlagen');
+				}
+				const redirect = new URLSearchParams(location.search).get('redirect') || '/index.html';
+				// Schutz: Nicht auf sich selbst zurückleiten
+				const target = redirect && redirect !== location.pathname ? redirect : '/index.html';
+				location.href = target;
+			} catch (e) {
+				errorEl.textContent = e.message;
+				errorEl.style.display = 'block';
+			}
+		}
+	</script>
+	</head>
+<body>
+	<div class="card">
+		<h1>Anmeldung</h1>
+		<div id="error" class="error"></div>
+		<form onsubmit="doLogin(event)">
+			<label for="username">Benutzername</label>
+			<input id="username" name="username" autocomplete="username" />
+			<label for="password">Passwort</label>
+			<input id="password" name="password" type="password" autocomplete="current-password" />
+			<button type="submit">Einloggen</button>
+			<div class="info">Hinweis: Falls noch kein Benutzer existiert, wird beim ersten Aufruf ein Admin (admin/admin123) erstellt.</div>
+		</form>
+	</div>
+</body>
+</html>
+
+

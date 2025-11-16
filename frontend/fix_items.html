@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Items Korrektur-Script</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d1b0e 100%);
+            color: #f5f5f5;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(20, 15, 10, 0.95);
+            border: 2px solid rgba(139, 69, 19, 0.6);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            color: #ff8c00;
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+        .section {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(139, 69, 19, 0.4);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .section h2 {
+            color: #ffb366;
+            margin-top: 0;
+        }
+        button {
+            background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        button:hover {
+            background: linear-gradient(135deg, #ff6b00 0%, #ff4500 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .info {
+            background: rgba(0, 100, 200, 0.2);
+            border-left: 4px solid #4a9eff;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .warning {
+            background: rgba(255, 140, 0, 0.2);
+            border-left: 4px solid #ff8c00;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .error {
+            background: rgba(255, 0, 0, 0.2);
+            border-left: 4px solid #ff4444;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: rgba(0, 200, 0, 0.2);
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        pre {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid rgba(139, 69, 19, 0.3);
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 140, 0, 0.3);
+            border-radius: 50%;
+            border-top-color: #ff8c00;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(139, 69, 19, 0.3);
+        }
+        th {
+            background: rgba(139, 69, 19, 0.3);
+            color: #ffb366;
+            font-weight: bold;
+        }
+        tr:hover {
+            background: rgba(139, 69, 19, 0.1);
+        }
+        .bad-type {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+        .good-type {
+            color: #4caf50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Items Korrektur-Script</h1>
+        
+        <div class="section">
+            <h2>1. Fehlerhafte Items finden</h2>
+            <div class="info">
+                <strong>Was wird geprüft:</strong><br>
+                - Items mit falschem type (z.B. 'tools' statt 'tool', 'consumables' statt 'consumable')<br>
+                - Items ohne category<br>
+                - Items mit ungültigen type-Werten
+            </div>
+            <button onclick="findBrokenItems()">Fehlerhafte Items finden</button>
+            <div id="findResult"></div>
+        </div>
+        
+        <div class="section">
+            <h2>2. Items korrigieren</h2>
+            <div class="warning">
+                <strong>WICHTIG:</strong> Dieses Script korrigiert fehlerhafte Items in der Datenbank.<br>
+                Bitte erst Schritt 1 ausführen, um zu sehen, welche Items korrigiert werden.
+            </div>
+            <button onclick="fixItems()" id="fixBtn" disabled>Items korrigieren</button>
+            <div id="fixResult"></div>
+        </div>
+        
+        <div class="section">
+            <h2>3. Alle Items anzeigen</h2>
+            <button onclick="showAllItems()">Alle Items anzeigen</button>
+            <div id="allItemsResult"></div>
+        </div>
+    </div>
+
+    <script>
+        let brokenItems = [];
+        
+        async function findBrokenItems() {
+            const resultEl = document.getElementById('findResult');
+            resultEl.innerHTML = '<div class="loading"></div> Suche fehlerhafte Items...';
+            
+            try {
+                // Verwende den neuen Fix-Endpoint
+                const response = await fetch('/backend/api/fix_items.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'find',
+                        character_id: 1
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                brokenItems = data.broken_items || [];
+                
+                if (brokenItems.length === 0) {
+                    resultEl.innerHTML = `
+                        <div class="success">
+                            <strong>✓ Keine fehlerhaften Items gefunden!</strong><br>
+                            Alle ${data.total_items} Items sind korrekt.
+                        </div>
+                    `;
+                    document.getElementById('fixBtn').disabled = true;
+                } else {
+                    let html = `
+                        <div class="warning">
+                            <strong>⚠ ${brokenItems.length} fehlerhafte Items gefunden (von ${data.total_items} insgesamt):</strong>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Aktueller Type</th>
+                                    <th>Category</th>
+                                    <th>Probleme</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    brokenItems.forEach(item => {
+                        const correctType = item.category === 'tools' ? 'tool' :
+                                          item.category === 'consumables' ? 'consumable' :
+                                          item.category === 'treasure' ? 'treasure' :
+                                          item.type === 'tools' ? 'tool' :
+                                          item.type === 'consumables' ? 'consumable' :
+                                          'equipment';
+                        
+                        html += `
+                            <tr>
+                                <td>${item.id}</td>
+                                <td>${escapeHtml(item.name)}</td>
+                                <td class="bad-type">${escapeHtml(item.type)}</td>
+                                <td>${escapeHtml(item.category || 'FEHLT')}</td>
+                                <td>
+                                    <ul style="margin: 0; padding-left: 20px;">
+                                        ${item.issues.map(issue => `<li>${escapeHtml(issue)}</li>`).join('')}
+                                    </ul>
+                                    <strong>→ Korrektur:</strong> type = "${correctType}"
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += `
+                            </tbody>
+                        </table>
+                    `;
+                    
+                    resultEl.innerHTML = html;
+                    document.getElementById('fixBtn').disabled = false;
+                }
+            } catch (error) {
+                resultEl.innerHTML = `
+                    <div class="error">
+                        <strong>FEHLER:</strong> ${escapeHtml(error.message)}
+                    </div>
+                `;
+            }
+        }
+        
+        async function fixItems() {
+            if (brokenItems.length === 0) {
+                alert('Keine fehlerhaften Items gefunden. Bitte zuerst "Fehlerhafte Items finden" ausführen.');
+                return;
+            }
+            
+            const resultEl = document.getElementById('fixResult');
+            resultEl.innerHTML = '<div class="loading"></div> Korrigiere Items...';
+            document.getElementById('fixBtn').disabled = true;
+            
+            try {
+                // Verwende den neuen Fix-Endpoint
+                const response = await fetch('/backend/api/fix_items.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'fix',
+                        items: brokenItems
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                let html = '';
+                
+                if (data.fixed && data.fixed.length > 0) {
+                    html += `
+                        <div class="success">
+                            <strong>✓ ${data.fixed_count} Items erfolgreich korrigiert:</strong>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Alter Type</th>
+                                    <th>Neuer Type</th>
+                                    <th>Alte Category</th>
+                                    <th>Neue Category</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    data.fixed.forEach(fix => {
+                        html += `
+                            <tr>
+                                <td>${fix.id}</td>
+                                <td>${escapeHtml(fix.name)}</td>
+                                <td class="bad-type">${escapeHtml(fix.old_type)}</td>
+                                <td class="good-type">${escapeHtml(fix.new_type)}</td>
+                                <td>${escapeHtml(fix.old_category)}</td>
+                                <td class="good-type">${escapeHtml(fix.new_category)}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += `
+                            </tbody>
+                        </table>
+                    `;
+                }
+                
+                if (data.errors && data.errors.length > 0) {
+                    html += `
+                        <div class="error">
+                            <strong>✗ ${data.error_count} Fehler beim Korrigieren:</strong>
+                        </div>
+                        <pre>${JSON.stringify(data.errors, null, 2)}</pre>
+                    `;
+                }
+                
+                resultEl.innerHTML = html;
+                
+                // Aktualisiere die Liste der fehlerhaften Items
+                if (data.fixed && data.fixed.length > 0) {
+                    setTimeout(() => {
+                        findBrokenItems();
+                    }, 1000);
+                }
+            } catch (error) {
+                resultEl.innerHTML = `
+                    <div class="error">
+                        <strong>FEHLER:</strong> ${escapeHtml(error.message)}
+                    </div>
+                `;
+            }
+        }
+        
+        async function showAllItems() {
+            const resultEl = document.getElementById('allItemsResult');
+            resultEl.innerHTML = '<div class="loading"></div> Lade alle Items...';
+            
+            try {
+                const response = await fetch('/backend/api/sql.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: `SELECT id, character_id, name, type, category, quantity, created_at FROM items WHERE character_id = 1 ORDER BY id`
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                const items = data.results || [];
+                
+                if (items.length === 0) {
+                    resultEl.innerHTML = `
+                        <div class="warning">
+                            <strong>Keine Items gefunden!</strong><br>
+                            Es wurden keine Items für Character ID 1 in der Datenbank gefunden.
+                        </div>
+                    `;
+                } else {
+                    let html = `
+                        <div class="info">
+                            <strong>${items.length} Items gefunden:</strong>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Category</th>
+                                    <th>Menge</th>
+                                    <th>Erstellt</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    items.forEach(item => {
+                        const typeClass = ['weapon', 'armor', 'consumable', 'tool', 'treasure', 'equipment'].includes(item.type) 
+                            ? 'good-type' 
+                            : 'bad-type';
+                        
+                        html += `
+                            <tr>
+                                <td>${item.id}</td>
+                                <td>${escapeHtml(item.name)}</td>
+                                <td class="${typeClass}">${escapeHtml(item.type)}</td>
+                                <td>${escapeHtml(item.category || 'FEHLT')}</td>
+                                <td>${item.quantity || 1}</td>
+                                <td>${item.created_at || 'N/A'}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += `
+                            </tbody>
+                        </table>
+                    `;
+                    
+                    resultEl.innerHTML = html;
+                }
+            } catch (error) {
+                resultEl.innerHTML = `
+                    <div class="error">
+                        <strong>FEHLER:</strong> ${escapeHtml(error.message)}
+                    </div>
+                `;
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Initial: Zeige alle Items
+        showAllItems();
+    </script>
+</body>
+</html>
+

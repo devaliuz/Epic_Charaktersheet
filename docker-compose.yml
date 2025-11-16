@@ -1,0 +1,69 @@
+services:
+  # PHP Backend Service
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dnd_char_php
+    volumes:
+      - ./backend:/var/www/html/backend
+      - ./frontend:/var/www/html/public
+      - ./docker/apache:/etc/apache2/sites-available
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_DATABASE=dnd_charsheet
+      - DB_USERNAME=dnd_user
+      - DB_PASSWORD=dnd_password
+      - DB_PORT=3306
+    networks:
+      - dnd_network
+    restart: unless-stopped
+
+  # MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: dnd_char_db
+    environment:
+      MYSQL_DATABASE: dnd_charsheet
+      MYSQL_USER: dnd_user
+      MYSQL_PASSWORD: dnd_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/02-init.sql
+    networks:
+      - dnd_network
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+
+  # phpMyAdmin (optional, für Datenbank-Management)
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: dnd_char_pma
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: root_password
+      UPLOAD_LIMIT: 50M
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+    networks:
+      - dnd_network
+    restart: unless-stopped
+
+volumes:
+  db_data:
+    driver: local
+
+networks:
+  dnd_network:
+    driver: bridge

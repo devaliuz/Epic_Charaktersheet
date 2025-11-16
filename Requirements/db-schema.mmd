@@ -1,0 +1,325 @@
+%% Mermaid ER-Diagramm: Ziel-DB-Struktur (PostgreSQL bevorzugt)
+%% Hinweis: Beziehungen (1..n, n..m) sind konzeptionell; Detailfelder siehe spec.md
+
+erDiagram
+  USERS {
+    int id PK
+    string username UK
+    string password_hash
+    enum role "admin|user"
+    datetime created_at
+  }
+
+  CHARACTERS {
+    int id PK
+    int user_id FK "nullable (Admin sieht alle)"
+    string name
+    int level
+    int class_id FK
+    int subclass_id FK nullable
+    int race_id FK
+    int subrace_id FK nullable
+    int background_id FK nullable
+    string alignment
+    enum portrait_mode "civil|stage"
+    datetime created_at
+    datetime updated_at
+  }
+
+  CHARACTER_STATS {
+    int character_id PK,FK
+    int str
+    int dex
+    int con
+    int int
+    int wis
+    int cha
+    int current_hp
+    int max_hp
+    int temp_hp
+    int armor_class
+    int proficiency_bonus
+    int current_xp
+    int current_bi
+    int max_bi
+    int current_hd
+    int max_hd
+  }
+
+  ITEMS {
+    int id PK
+    int character_id FK
+    int content_item_id FK nullable
+    bool is_custom "Ad-hoc-Instanz?"
+    int created_by_user_id FK nullable
+    string name
+    enum type "weapon|armor|consumable|tool|treasure|other"
+    enum category "equipment|consumables|tools|treasure"
+    int quantity
+    string damage_text
+    string to_hit_text
+    string range_text
+    int ac
+    bool dex_bonus
+    int max_dex_bonus
+    string value_text
+    jsonb properties
+  }
+
+  EQUIPMENT_SLOTS {
+    int id PK
+    int character_id FK
+    enum slot_type "armor|mainhand|offhand|ring1|ring2|amulet|belt|head|cloak|boots"
+    int item_id FK nullable
+    unique character_id,slot_type
+  }
+
+  MONEY {
+    int character_id PK,FK
+    int gold
+    int silver
+    int copper
+  }
+
+  NOTES {
+    int id PK
+    int character_id FK
+    enum type "adventure|character|performance|custom"
+    text content
+    datetime updated_at
+  }
+
+  SKILLS {
+    int id PK
+    int character_id FK
+    string skill_name
+    bool proficient
+    bool expertise
+    int bonus
+  }
+
+  DEATH_SAVES {
+    int character_id PK,FK
+    int successes
+    int failures
+  }
+
+  SPELL_SLOTS {
+    int id PK
+    int character_id FK
+    int slot_level
+    int slot_number
+    bool used
+  }
+
+  SESSIONS {
+    int id PK
+    int character_id FK
+    string session_name
+    datetime started_at
+    datetime ended_at nullable
+    text notes
+  }
+
+  SESSION_SNAPSHOTS {
+    int id PK
+    int session_id FK nullable
+    int character_id FK
+    enum snapshot_type "session_start|session_end|manual"
+    jsonb character_data "VOLLSTÄNDIGER Zustand"
+    datetime created_at
+  }
+
+  %% SRD/Content-Katalog (Canon & Custom)
+  CONTENT_WEAPONS {
+    int id PK
+    string name
+    enum weapon_category "simple|martial"
+    enum combat_type "melee|ranged"
+    string hands
+    string damage_dice
+    string damage_type
+    jsonb properties
+    enum source "canon|homebrew|custom"
+    int created_by_user_id FK nullable
+    bool is_public
+  }
+
+  CONTENT_ARMORS {
+    int id PK
+    string name
+    enum armor_category "light|medium|heavy|shield"
+    int base_ac
+    bool dex_bonus_allowed
+    int max_dex_bonus nullable
+    bool stealth_disadvantage
+    int strength_requirement nullable
+    jsonb properties
+    enum source "canon|homebrew|custom"
+    int created_by_user_id FK nullable
+    bool is_public
+  }
+
+  CONTENT_SPELLS {
+    int id PK
+    string name
+    int level "0=cantrip"
+    string school
+    string casting_time
+    string range
+    string components "V|S|M"
+    string material_text
+    string duration
+    bool concentration
+    bool ritual
+    text description
+    text higher_levels
+    enum source "canon|homebrew|custom"
+    int created_by_user_id FK nullable
+    bool is_public
+  }
+
+  CONTENT_CLASSES {
+    int id PK
+    string name
+    string hit_die
+    string primary_ability
+    jsonb saving_throws
+    jsonb spellcasting_progression
+  }
+
+  CONTENT_SUBCLASSES {
+    int id PK
+    int class_id FK
+    string name
+    text description
+  }
+
+  CONTENT_RACES {
+    int id PK
+    string name
+    jsonb ability_bonuses
+    int speed
+    jsonb languages
+  }
+
+  CONTENT_SUBRACES {
+    int id PK
+    int race_id FK
+    string name
+    jsonb overrides
+  }
+
+  CONTENT_BACKGROUNDS {
+    int id PK
+    string name
+    jsonb proficiencies
+    jsonb equipment_pack
+  }
+
+  CONTENT_PROFICIENCIES {
+    int id PK
+    enum type "weapon|armor|tool|skill|saving_throw|language|instrument"
+    string key
+    string name
+    jsonb metadata
+  }
+
+  CONTENT_FEATURES {
+    int id PK
+    enum source_type "class|subclass|race|background|feat"
+    int source_id
+    string name
+    int level_min nullable
+    jsonb rules
+  }
+
+  %% Mappings
+  CLASS_PROFICIENCIES {
+    int class_id FK
+    int proficiency_id FK
+  }
+  SPELL_CLASSES {
+    int spell_id FK
+    int class_id FK
+  }
+  SUBCLASS_FEATURES {
+    int subclass_id FK
+    int feature_id FK
+  }
+  RACE_FEATURES {
+    int race_id FK
+    int feature_id FK
+  }
+  BACKGROUND_FEATURES {
+    int background_id FK
+    int feature_id FK
+  }
+
+  CLASS_LEVEL_PROGRESSION {
+    int id PK
+    int class_id FK
+    int level
+    jsonb features_granted
+    jsonb spell_slots
+    int proficiency_bonus_override nullable
+  }
+
+  SUBCLASS_LEVEL_PROGRESSION {
+    int id PK
+    int subclass_id FK
+    int level
+    jsonb features_granted
+  }
+
+  %% Charakter-Leveling / Multiclass
+  CHARACTER_CLASS_STATE {
+    int id PK
+    int character_id FK
+    int class_id FK
+    int current_level
+    int hit_dice_spent
+    datetime created_at
+  }
+  CHARACTER_SUBCLASS_STATE {
+    int id PK
+    int character_id FK
+    int subclass_id FK
+    int chosen_level
+  }
+  CHARACTER_CHOICES {
+    int id PK
+    int character_id FK
+    int at_level
+    string choice_type
+    jsonb payload
+  }
+
+  %% Beziehungen
+  USERS ||--o{ CHARACTERS : "owns (nullable)"
+  CHARACTERS ||--|| CHARACTER_STATS : "has"
+  CHARACTERS ||--o{ ITEMS : "has many"
+  CHARACTERS ||--o{ EQUIPMENT_SLOTS : "slots"
+  CHARACTERS ||--|| MONEY : "has"
+  CHARACTERS ||--o{ NOTES : "has many"
+  CHARACTERS ||--o{ SKILLS : "has many"
+  CHARACTERS ||--|| DEATH_SAVES : "has"
+  CHARACTERS ||--o{ SPELL_SLOTS : "has many"
+  CHARACTERS ||--o{ SESSIONS : "plays"
+  SESSIONS ||--o{ SESSION_SNAPSHOTS : "captures"
+  CONTENT_CLASSES ||--o{ CONTENT_SUBCLASSES : "has"
+  CONTENT_RACES ||--o{ CONTENT_SUBRACES : "has"
+  CONTENT_CLASSES ||--o{ CLASS_LEVEL_PROGRESSION : "levels"
+  CONTENT_SUBCLASSES ||--o{ SUBCLASS_LEVEL_PROGRESSION : "levels"
+  CONTENT_CLASSES ||--o{ CLASS_PROFICIENCIES : "grants"
+  CONTENT_PROFICIENCIES ||--o{ CLASS_PROFICIENCIES : ""
+  CONTENT_SPELLS ||--o{ SPELL_CLASSES : ""
+  CONTENT_CLASSES ||--o{ SPELL_CLASSES : ""
+  CONTENT_SUBCLASSES ||--o{ SUBCLASS_FEATURES : ""
+  CONTENT_FEATURES ||--o{ SUBCLASS_FEATURES : ""
+  CONTENT_RACES ||--o{ RACE_FEATURES : ""
+  CONTENT_FEATURES ||--o{ RACE_FEATURES : ""
+  CONTENT_BACKGROUNDS ||--o{ BACKGROUND_FEATURES : ""
+  CONTENT_FEATURES ||--o{ BACKGROUND_FEATURES : ""
+
+
