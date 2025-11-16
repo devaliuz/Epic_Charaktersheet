@@ -80,7 +80,20 @@ class AuthAPI {
         $stmt->execute([$username]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$user || !password_verify($password, $user['password_hash'])) {
+        $valid = false;
+        if ($user) {
+            // Primär: PHP password_hash() kompatibel prüfen
+            $valid = password_verify($password, $user['password_hash']);
+            // Fallback: pgcrypto/crypt()-Hashes akzeptieren
+            if (!$valid) {
+                $cryptCheck = @crypt($password, $user['password_hash']);
+                if (is_string($cryptCheck) && hash_equals($cryptCheck, $user['password_hash'])) {
+                    $valid = true;
+                }
+            }
+        }
+
+        if (!$user || !$valid) {
             http_response_code(401);
             echo json_encode(['error' => 'Ungültige Zugangsdaten']);
             return;
