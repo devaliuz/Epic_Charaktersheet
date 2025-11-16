@@ -44,6 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once '../config/database.php';
 require_once '../models/Character.php';
+require_once __DIR__ . '/logger.php';
 
 class CharacterAPI {
     private $db;
@@ -91,6 +92,7 @@ class CharacterAPI {
     // GET /api/characters.php?id=1 oder GET /api/characters.php
     public function getCharacter($id = null) {
         $this->requireAuth();
+        app_log('characters.get.begin', ['id' => $id]);
         if ($id) {
             $this->ensureOwnershipOrAdmin($id);
             $character = $this->characterModel->getById($id);
@@ -99,6 +101,7 @@ class CharacterAPI {
                 echo json_encode(['error' => 'Charakter nicht gefunden']);
                 return;
             }
+            app_log('characters.get.one', ['id' => $id]);
             echo json_encode($character);
         } else {
             // Alle Charaktere auflisten (Admin: alle, User: eigene)
@@ -109,6 +112,7 @@ class CharacterAPI {
                 $stmt->execute([$this->currentUser['id']]);
                 $characters = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }
+            app_log('characters.get.list', ['count' => is_array($characters) ? count($characters) : null]);
             echo json_encode($characters);
         }
     }

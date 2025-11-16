@@ -38,6 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once '../config/database.php';
 require_once '../models/Character.php';
+require_once __DIR__ . '/logger.php';
 
 class SessionsAPI {
     private $db;
@@ -87,6 +88,7 @@ class SessionsAPI {
     public function getSessions($characterId, $activeOnly = false) {
         $this->requireAuth();
         $this->ensureOwnershipOrAdmin($characterId);
+        app_log('sessions.get.begin', ['character_id' => $characterId, 'activeOnly' => $activeOnly]);
         if ($activeOnly) {
             $stmt = $this->db->prepare("
                 SELECT * FROM sessions 
@@ -121,6 +123,7 @@ class SessionsAPI {
     public function startSession($characterId, $sessionName = null) {
         $this->requireAuth();
         $this->ensureOwnershipOrAdmin($characterId);
+        app_log('sessions.start.begin', ['character_id' => $characterId, 'session_name' => $sessionName]);
         // Prüfe ob bereits aktive Session existiert
         $stmt = $this->db->prepare("SELECT id FROM sessions WHERE character_id = ? AND ended_at IS NULL");
         $stmt->execute([$characterId]);
@@ -153,10 +156,12 @@ class SessionsAPI {
                 'session_id' => $sessionId,
                 'message' => 'Session gestartet'
             ]);
+            app_log('sessions.start.success', ['character_id' => $characterId, 'session_id' => $sessionId]);
         } catch (Exception $e) {
             $this->db->rollBack();
             http_response_code(500);
             echo json_encode(['error' => 'Fehler beim Starten der Session: ' . $e->getMessage()]);
+            app_log('sessions.start.error', ['error' => $e->getMessage()]);
         }
     }
     

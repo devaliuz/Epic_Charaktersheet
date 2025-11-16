@@ -42,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once '../config/database.php';
+require_once __DIR__ . '/logger.php';
 
 class AuthAPI {
     private $db;
@@ -54,6 +55,7 @@ class AuthAPI {
     // Stelle sicher, dass mindestens ein Admin existiert
     private function ensureDefaultAdmin() {
         try {
+            app_log('auth.ensureDefaultAdmin.begin');
             // PostgreSQL: Schema und Tabellen werden über docker/postgres/init/* erstellt.
             // Hier nur sicherstellen, dass mindestens ein Admin existiert.
             $stmt = $this->db->query("SELECT COUNT(*) AS cnt FROM users");
@@ -64,9 +66,11 @@ class AuthAPI {
                 $hash = password_hash($password, PASSWORD_BCRYPT);
                 $ins = $this->db->prepare("INSERT INTO users (username, password_hash, role) VALUES (?, ?, 'admin')");
                 $ins->execute([$username, $hash]);
+                app_log('auth.ensureDefaultAdmin.created_admin');
             }
         } catch (Throwable $e) {
             // Lasse Fehler nach außen gehen, Handler antwortet mit JSON
+            app_log('auth.ensureDefaultAdmin.error', ['error' => $e->getMessage()]);
             throw $e;
         }
     }
@@ -90,6 +94,7 @@ class AuthAPI {
             return;
         }
 
+        app_log('auth.login.begin', ['user' => $username]);
         $stmt = $this->db->prepare("SELECT id, username, password_hash, role FROM users WHERE username = ?");
         $stmt->execute([$username]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -108,6 +113,7 @@ class AuthAPI {
         }
 
         if (!$user || !$valid) {
+            app_log('auth.login.fail', ['user' => $username]);
             http_response_code(401);
             echo json_encode(['error' => 'Ungültige Zugangsdaten']);
             return;
@@ -118,6 +124,7 @@ class AuthAPI {
         $_SESSION['user_id'] = (int)$user['id'];
         $_SESSION['username'] = $user['username'];
         $_SESSION['role'] = $user['role'];
+        app_log('auth.login.success', ['user' => $username]);
 
         echo json_encode([
             'success' => true,
