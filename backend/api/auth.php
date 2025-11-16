@@ -26,7 +26,10 @@ if (session_status() === PHP_SESSION_NONE) {
 
 header('Content-Type: application/json');
 // Dynamischer Origin für Cookies
-$origin = $_SERVER['HTTP_ORIGIN'] ?? 'http://localhost:8090';
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost:8090';
+$computedOrigin = $scheme . '://' . $host;
+$origin = $_SERVER['HTTP_ORIGIN'] ?? $computedOrigin;
 header("Access-Control-Allow-Origin: $origin");
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -110,6 +113,8 @@ class AuthAPI {
             return;
         }
 
+        // Nach erfolgreicher Verifikation: Session stabilisieren
+        session_regenerate_id(true);
         $_SESSION['user_id'] = (int)$user['id'];
         $_SESSION['username'] = $user['username'];
         $_SESSION['role'] = $user['role'];
