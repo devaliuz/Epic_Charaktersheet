@@ -233,7 +233,7 @@ class Character {
     
     private function updateStats($characterId, $stats) {
         // Prüfe ob Stats existieren
-        $stmt = $this->db->prepare("SELECT id FROM character_stats WHERE character_id = ?");
+        $stmt = $this->db->prepare("SELECT character_id FROM character_stats WHERE character_id = ?");
         $stmt->execute([$characterId]);
         $exists = $stmt->fetch();
         
@@ -352,12 +352,13 @@ class Character {
                 }
             }
             
+            // Postgres UPSERT über UNIQUE(character_id, slot_type)
             $stmt = $this->db->prepare("
                 INSERT INTO equipment_slots (character_id, slot_type, item_id)
                 VALUES (?, ?, ?)
-                ON DUPLICATE KEY UPDATE item_id = ?
+                ON CONFLICT (character_id, slot_type) DO UPDATE SET item_id = EXCLUDED.item_id
             ");
-            $stmt->execute([$characterId, $slotType, $itemId, $itemId]);
+            $stmt->execute([$characterId, $slotType, $itemId]);
         }
     }
     
@@ -397,12 +398,15 @@ class Character {
     }
     
     private function initEquipment($characterId) {
-        $stmt = $this->db->prepare("
-            INSERT INTO equipment_slots (character_id, slot_type, item_id)
-            VALUES (?, 'armor', NULL), (?, 'mainhand', NULL), (?, 'offhand', NULL)
-            ON DUPLICATE KEY UPDATE item_id = item_id
-        ");
-        $stmt->execute([$characterId, $characterId, $characterId]);
+        // Je Slot einmal upserten
+        foreach (['armor', 'mainhand', 'offhand'] as $slot) {
+            $stmt = $this->db->prepare("
+                INSERT INTO equipment_slots (character_id, slot_type, item_id)
+                VALUES (?, ?, NULL)
+                ON CONFLICT (character_id, slot_type) DO NOTHING
+            ");
+            $stmt->execute([$characterId, $slot]);
+        }
     }
     
     private function getInventory($characterId) {
@@ -567,11 +571,11 @@ class Character {
         
         $stmt = $this->db->prepare("
             INSERT INTO items (
-                character_id, name, type, category,
-                damage, to_hit, range_property, combat_type, hands, light, offhand_damage,
+                character_id, name, type, category, quantity,
+                damage_text, to_hit_text, range_text,
                 ac, dex_bonus, max_dex_bonus,
-                value, quantity, properties
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                value_text, properties
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
         // Mappe category zu type falls type nicht gesetzt oder falsch
@@ -593,18 +597,14 @@ class Character {
                 $itemData['name'],
                 $itemType,
                 $category,
-                $itemData['damage'] ?? null,
-                $itemData['toHit'] ?? null,
-                $itemData['range'] ?? null,
-                $itemData['combatType'] ?? null,
-                $itemData['hands'] ?? null,
-                (isset($itemData['light']) && $itemData['light'] !== '' && $itemData['light'] !== null && $itemData['light'] !== false && $itemData['light'] !== 'false') ? 1 : 0,
-                $itemData['offhandDamage'] ?? null,
+                $itemData['quantity'] ?? 1,
+                $itemData['damage'] ?? $itemData['damage_text'] ?? null,
+                $itemData['toHit'] ?? $itemData['to_hit_text'] ?? null,
+                $itemData['range'] ?? $itemData['range_text'] ?? null,
                 $itemData['ac'] ?? null,
                 (isset($itemData['dexBonus']) && $itemData['dexBonus'] !== '' && $itemData['dexBonus'] !== null && $itemData['dexBonus'] !== false && $itemData['dexBonus'] !== 'false') ? 1 : 0,
                 $itemData['maxDexBonus'] ?? null,
-                $itemData['value'] ?? null,
-                $itemData['quantity'] ?? 1,
+                $itemData['value'] ?? $itemData['value_text'] ?? null,
                 isset($itemData['properties']) ? json_encode($itemData['properties']) : null
             ]);
             
@@ -646,35 +646,17 @@ class Character {
             $updates[] = "quantity = ?";
             $params[] = $itemData['quantity'];
         }
-        if (isset($itemData['damage'])) {
-            $updates[] = "damage = ?";
-            $params[] = $itemData['damage'];
+        if (isset($itemData['damage']) || isset($itemData['damage_text'])) {
+            $updates[] = "damage_text = ?";
+            $params[] = $itemData['damage_text'] ?? $itemData['damage'];
         }
-        if (isset($itemData['toHit'])) {
-            $updates[] = "to_hit = ?";
-            $params[] = $itemData['toHit'];
+        if (isset($itemData['toHit']) || isset($itemData['to_hit_text'])) {
+            $updates[] = "to_hit_text = ?";
+            $params[] = $itemData['to_hit_text'] ?? $itemData['toHit'];
         }
-        if (isset($itemData['range'])) {
-            $updates[] = "range_property = ?";
-            $params[] = $itemData['range'];
-        }
-        if (isset($itemData['combatType'])) {
-            $updates[] = "combat_type = ?";
-            $params[] = $itemData['combatType'];
-        }
-        if (isset($itemData['hands'])) {
-            $updates[] = "hands = ?";
-            $params[] = $itemData['hands'];
-        }
-        if (isset($itemData['light'])) {
-            $updates[] = "light = ?";
-            // Konvertiere leere Strings, null, undefined, false zu 0, sonst zu 1
-            $lightValue = $itemData['light'];
-            $params[] = ($lightValue === '' || $lightValue === null || $lightValue === false || $lightValue === 'false' || $lightValue === 0 || $lightValue === '0') ? 0 : 1;
-        }
-        if (isset($itemData['offhandDamage'])) {
-            $updates[] = "offhand_damage = ?";
-            $params[] = $itemData['offhandDamage'];
+        if (isset($itemData['range']) || isset($itemData['range_text'])) {
+            $updates[] = "range_text = ?";
+            $params[] = $itemData['range_text'] ?? $itemData['range'];
         }
         if (isset($itemData['ac'])) {
             $updates[] = "ac = ?";
@@ -690,9 +672,9 @@ class Character {
             $updates[] = "max_dex_bonus = ?";
             $params[] = $itemData['maxDexBonus'];
         }
-        if (isset($itemData['value'])) {
-            $updates[] = "value = ?";
-            $params[] = $itemData['value'];
+        if (isset($itemData['value']) || isset($itemData['value_text'])) {
+            $updates[] = "value_text = ?";
+            $params[] = $itemData['value_text'] ?? $itemData['value'];
         }
         if (isset($itemData['properties'])) {
             $updates[] = "properties = ?";
@@ -712,17 +694,14 @@ class Character {
             'name' => $row['name'],
             'type' => $row['type'],
             'category' => $row['category'],
-            'damage' => $row['damage'],
-            'toHit' => $row['to_hit'],
-            'range' => $row['range_property'],
-            'combatType' => $row['combat_type'],
-            'hands' => $row['hands'],
-            'light' => (bool)$row['light'],
-            'offhandDamage' => $row['offhand_damage'],
+            'damage' => $row['damage_text'],
+            'toHit' => $row['to_hit_text'],
+            'range' => $row['range_text'],
+            'light' => isset($row['dex_bonus']) ? (bool)$row['dex_bonus'] : false, // historisch: light->dex_bonus passt hier nicht mehr semantisch, bleibt leer
             'ac' => $row['ac'] ? (int)$row['ac'] : null,
-            'dexBonus' => (bool)$row['dex_bonus'],
+            'dexBonus' => isset($row['dex_bonus']) ? (bool)$row['dex_bonus'] : false,
             'maxDexBonus' => $row['max_dex_bonus'] ? (int)$row['max_dex_bonus'] : null,
-            'value' => $row['value'],
+            'value' => $row['value_text'],
             'quantity' => (int)$row['quantity'],
             'properties' => $row['properties'] ? json_decode($row['properties'], true) : null
         ];
@@ -757,9 +736,9 @@ class Character {
             $stmt = $this->db->prepare("
                 INSERT INTO spell_slots (character_id, slot_level, slot_number, used)
                 VALUES (?, 1, ?, ?)
-                ON DUPLICATE KEY UPDATE used = ?
+                ON CONFLICT (character_id, slot_level, slot_number) DO UPDATE SET used = EXCLUDED.used
             ");
-            $stmt->execute([$characterId, $slotNumber, $used ? 1 : 0, $used ? 1 : 0]);
+            $stmt->execute([$characterId, $slotNumber, $used ? 1 : 0]);
         }
     }
     
@@ -771,7 +750,7 @@ class Character {
             $stmt = $this->db->prepare("
                 INSERT INTO spell_slots (character_id, slot_level, slot_number, used)
                 VALUES (?, 1, ?, 0)
-                ON DUPLICATE KEY UPDATE used = 0
+                ON CONFLICT (character_id, slot_level, slot_number) DO UPDATE SET used = 0
             ");
             $stmt->execute([$characterId, $i]);
         }
@@ -789,13 +768,13 @@ class Character {
         $stmt = $this->db->prepare("
             INSERT INTO money (character_id, gold, silver, copper)
             VALUES (?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE gold = ?, silver = ?, copper = ?
+            ON CONFLICT (character_id) DO UPDATE SET 
+                gold = EXCLUDED.gold,
+                silver = EXCLUDED.silver,
+                copper = EXCLUDED.copper
         ");
         $stmt->execute([
             $characterId,
-            $money['gold'] ?? 0,
-            $money['silver'] ?? 0,
-            $money['copper'] ?? 0,
             $money['gold'] ?? 0,
             $money['silver'] ?? 0,
             $money['copper'] ?? 0
@@ -825,9 +804,9 @@ class Character {
             $stmt = $this->db->prepare("
                 INSERT INTO notes (character_id, type, content)
                 VALUES (?, ?, ?)
-                ON DUPLICATE KEY UPDATE content = ?
+                ON CONFLICT (character_id, type) DO UPDATE SET content = EXCLUDED.content
             ");
-            $stmt->execute([$characterId, $type, $content, $content]);
+            $stmt->execute([$characterId, $type, $content]);
         }
     }
     
@@ -854,9 +833,9 @@ class Character {
         $stmt = $this->db->prepare("
             INSERT INTO death_saves (character_id, successes, failures)
             VALUES (?, ?, ?)
-            ON DUPLICATE KEY UPDATE successes = ?, failures = ?
+            ON CONFLICT (character_id) DO UPDATE SET successes = EXCLUDED.successes, failures = EXCLUDED.failures
         ");
-        $stmt->execute([$characterId, $successes, $failures, $successes, $failures]);
+        $stmt->execute([$characterId, $successes, $failures]);
     }
     
     private function initDeathSaves($characterId) {
