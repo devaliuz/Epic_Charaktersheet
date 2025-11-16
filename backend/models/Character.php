@@ -55,7 +55,7 @@ class Character {
      * Lade alle Charaktere (vereinfacht)
      */
     public function getAll() {
-        $stmt = $this->db->prepare("SELECT id, name, level, class, race FROM characters ORDER BY name");
+        $stmt = $this->db->prepare("SELECT id, name, level, alignment, portrait_mode FROM characters ORDER BY name");
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -69,16 +69,13 @@ class Character {
         try {
             // Charakter erstellen
             $stmt = $this->db->prepare("
-                INSERT INTO characters (name, level, class, race, background, alignment, portrait_mode, user_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO characters (name, level, alignment, portrait_mode, user_id)
+                VALUES (?, ?, ?, ?, ?)
             ");
             
             $stmt->execute([
                 $data['name'] ?? 'Neuer Charakter',
                 $data['level'] ?? 1,
-                $data['class'] ?? 'Barde',
-                $data['race'] ?? 'Tiefling',
-                $data['background'] ?? 'Entertainer',
                 $data['alignment'] ?? 'CN',
                 $data['portrait_mode'] ?? 'civil',
                 isset($data['user_id']) ? (int)$data['user_id'] : null
@@ -128,7 +125,7 @@ class Character {
         
         try {
             // Basis-Daten aktualisieren
-            if (isset($data['name']) || isset($data['level']) || isset($data['class']) || isset($data['race']) || isset($data['portrait_mode']) || isset($data['user_id'])) {
+            if (isset($data['name']) || isset($data['level']) || isset($data['alignment']) || isset($data['portrait_mode']) || array_key_exists('user_id', $data)) {
                 $updates = [];
                 $params = [];
                 
@@ -140,13 +137,10 @@ class Character {
                     $updates[] = "level = ?";
                     $params[] = $data['level'];
                 }
-                if (isset($data['class'])) {
-                    $updates[] = "class = ?";
-                    $params[] = $data['class'];
-                }
-                if (isset($data['race'])) {
-                    $updates[] = "race = ?";
-                    $params[] = $data['race'];
+                // class/race sind im neuen Schema katalogbasiert -> hier nicht mehr direkt setzen
+                if (isset($data['alignment'])) {
+                    $updates[] = "alignment = ?";
+                    $params[] = $data['alignment'];
                 }
                 if (isset($data['portrait_mode'])) {
                     $updates[] = "portrait_mode = ?";

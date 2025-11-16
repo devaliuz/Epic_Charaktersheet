@@ -108,7 +108,7 @@ class CharacterAPI {
             if ($this->isAdmin()) {
                 $characters = $this->characterModel->getAll();
             } else {
-                $stmt = $this->db->prepare("SELECT id, name, level, class, race FROM characters WHERE user_id = ? ORDER BY name");
+                $stmt = $this->db->prepare("SELECT id, name, level, alignment, portrait_mode FROM characters WHERE user_id = ? ORDER BY name");
                 $stmt->execute([$this->currentUser['id']]);
                 $characters = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }
